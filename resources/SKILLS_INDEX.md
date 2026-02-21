@@ -31,6 +31,7 @@ A catalog of all available skill templates with descriptions, categories, and de
 | `python` | `pyproject.toml`, `setup.py` | Python practices — uv/ruff/mypy/pytest, src layout, type annotations |
 | `jvm` | `build.gradle*`, `pom.xml`, `build.sbt` | Java/Kotlin/Scala — build systems, frameworks, testing |
 | `c-cpp` | `CMakeLists.txt`, `meson.build` | C/C++ — build systems, sanitizers, memory safety, linting |
+| `swift-ios` | `*.xcodeproj`, `Package.swift` | Swift & iOS — SwiftUI, UIKit, SwiftData, concurrency, App Store deployment |
 
 ## Technology Templates
 
