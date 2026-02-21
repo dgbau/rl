@@ -61,6 +61,7 @@ A catalog of all available skill templates with descriptions, categories, and de
 | `shopify` | `@shopify/*` in deps | Hydrogen, Storefront API, Admin API, Liquid themes |
 | `cloudflare` | — | Workers, Pages, R2, D1, KV, Turnstile, Zero Trust |
 | `python-ai-ml` | `torch`, `tensorflow`, `sklearn` | ML/AI pipelines, CV, data analysis, model training/deployment |
+| `raspberry-pi` | — | GPIO, sensors, touchscreen UI, camera, motors, kiosk deployment |
 
 ## Stack Templates
 
