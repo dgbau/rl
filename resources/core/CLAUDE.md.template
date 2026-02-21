@@ -1,0 +1,62 @@
+# Claude Code Configuration for $PROJECT_NAME
+
+You are working in the **$PROJECT_NAME** project.
+
+## Essential Files to Read
+
+1. [`AGENTS.md`](AGENTS.md) -- project commands, conventions, and operational patterns
+2. [`.tickets/`](.tickets/) -- active task tickets managed by [`tk`](https://github.com/wedow/ticket) CLI
+<!-- IF_OPENSPEC -->
+3. [`openspec/specs/`](openspec/specs/) -- living system documentation (source of truth for behavior)
+4. [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) -- high-level vision from interview
+<!-- END_OPENSPEC -->
+5. [`LESSONS.md`](LESSONS.md) -- cumulative learnings from prior iterations
+6. [`.claude/skills/`](.claude/skills/) -- agent skills (read relevant ones per ticket)
+7. [`ralph/README.md`](ralph/README.md) -- full Ralph Loop documentation
+
+## Context
+
+You may be running as part of the **Ralph Loop** -- an autonomous development pattern where each iteration spawns a fresh Claude Code instance. Your context is clean each time; continuity comes from:
+
+- Git history (recent commits show what was done)
+- [`.tickets/`](.tickets/) via [`tk`](https://github.com/wedow/ticket) `ready` / `ls` (tracks remaining tasks)
+<!-- IF_OPENSPEC -->
+- [`openspec/`](openspec/) (specs and active change proposals via [OpenSpec](https://github.com/fission-ai/openspec))
+<!-- END_OPENSPEC -->
+- [`AGENTS.md`](AGENTS.md) (operational guide)
+- [`LESSONS.md`](LESSONS.md) (cumulative learnings from prior iterations)
+- [`.claude/skills/`](.claude/skills/) (reusable agent knowledge)
+
+## Key Commands
+
+```bash
+# Backpressure (run before every commit)
+$BACKPRESSURE_CMD
+```
+
+## Rules
+
+- Write tests for every implementation -- code without tests is not complete
+- Run backpressure before committing
+- Use **[conventional commits](https://www.conventionalcommits.org/)**: `<type>(<scope>): <description>` (see [`AGENTS.md`](AGENTS.md) for types/scopes)
+- Use [`tk`](https://github.com/wedow/ticket) to manage tickets: `tk start`, `tk close`, `tk add-note`
+- Append learnings to [`LESSONS.md`](LESSONS.md) when you discover something non-obvious
+- Read relevant skills from [`.claude/skills/`](.claude/skills/) before starting a task
+
+<!-- IF_NX -->
+<!-- nx configuration start-->
+<!-- Leave the start & end comments to automatically receive updates. -->
+
+## General Guidelines for working with Nx
+
+- When running tasks (build, lint, test, e2e, etc.), always prefer running through `nx` instead of underlying tooling directly
+- Prefix nx commands with the workspace's package manager (e.g., `pnpm nx build`, `npx nx test`)
+- For Nx plugin best practices, check `node_modules/@nx/<plugin>/PLUGIN.md` if available
+- NEVER guess CLI flags -- always check `--help` first when unsure
+
+## Scaffolding & Generators
+
+- Use Nx generators for creating apps, libs, and project structure (`npx nx g @nx/react:component`, etc.)
+
+<!-- nx configuration end-->
+<!-- END_NX -->

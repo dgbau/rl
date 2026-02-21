@@ -1,0 +1,17 @@
+# .ralphrc — Ralph Loop configuration for rl toolkit itself (dogfooding)
+# This is rl's OWN config — NOT distributed to target repos.
+# The distributed template is resources/core/ralphrc.template
+
+PROJECT_NAME="rl"
+BASE_BRANCH="main"
+BACKPRESSURE_CMD="zsh -n rl create.sh install.sh skills.sh lib/common.sh"
+E2E_CMD=""
+CLAUDE_MODEL="opus"
+MAX_ITERATIONS=25
+REVIEW_WAIT=90
+USE_OPENSPEC=false
+IS_RL_TOOLKIT=true
+
+# rl is a shell toolkit — no Tailwind, no TypeScript
+USES_TAILWIND=false
+USES_TYPESCRIPT_STRICT=false
