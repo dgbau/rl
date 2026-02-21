@@ -15,7 +15,7 @@ This skill covers auth strategy, token handling, session management, and authori
 ### Self-Hosted (recommended for control and privacy)
 | Solution | Best For | Framework | Complexity |
 |----------|----------|-----------|------------|
-| Lucia | Lightweight, any framework | Any | Low |
+| Better Auth | TypeScript-first, plugins | Any TS | Low |
 | Auth.js v5 | Next.js projects | Next.js | Low-Medium |
 | Better Auth | TypeScript-first | Any TS | Low |
 | Ory (Kratos+Hydra) | Enterprise, OIDC/SAML | Any | High |

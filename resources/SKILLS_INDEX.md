@@ -18,6 +18,9 @@ A catalog of all available skill templates with descriptions, categories, and de
 | `testing-principles` | Test pyramid, AAA pattern, mocking discipline, CI requirements |
 | `observability` | Logging, metrics, tracing — three pillars, structured logging, alerting |
 | `data-integration` | External API consumption — retry, caching, circuit breakers, webhooks |
+| `react-patterns` | React design principles — hooks, state, composition, rendering optimization |
+| `nextjs-patterns` | Next.js App Router — RSC, routing, caching, Server Actions, middleware |
+| `nx` | Nx monorepo tooling — task orchestration, caching, affected, code generation |
 
 ## Language Templates
 
@@ -74,7 +77,7 @@ A catalog of all available skill templates with descriptions, categories, and de
 
 | Use Case | Recommended | Why |
 |----------|-------------|-----|
-| Self-hosted, lightweight | Lucia | Zero dependencies, any framework, full control |
+| Self-hosted, lightweight | Better Auth | TypeScript-first, plugin system, actively maintained |
 | Self-hosted, enterprise | Ory (Kratos+Hydra) | OIDC/SAML, Docker-native, open source |
 | Next.js specific | Auth.js v5 | First-party Next.js support, many providers |
 | Fastest to ship | Clerk | Prebuilt components, managed infrastructure |

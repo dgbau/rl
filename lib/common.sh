@@ -140,7 +140,7 @@ detect_project() {
   if [[ -f "$dir/go.mod" ]]; then
     langs+=(go)
   elif [[ -d "$dir/apps" ]]; then
-    for app_dir in "$dir/apps"/*/; do
+    for app_dir in "$dir/apps"/*/(N); do
       [[ -f "$app_dir/go.mod" ]] && { langs+=(go); break }
     done
   fi
@@ -149,7 +149,7 @@ detect_project() {
   if [[ -f "$dir/Cargo.toml" ]]; then
     langs+=(rust)
   elif [[ -d "$dir/apps" ]]; then
-    for app_dir in "$dir/apps"/*/; do
+    for app_dir in "$dir/apps"/*/(N); do
       [[ -f "$app_dir/Cargo.toml" ]] && { langs+=(rust); break }
     done
   fi
@@ -158,7 +158,7 @@ detect_project() {
   if [[ -f "$dir/pyproject.toml" ]] || [[ -f "$dir/setup.py" ]]; then
     langs+=(python)
   elif [[ -d "$dir/apps" ]]; then
-    for app_dir in "$dir/apps"/*/; do
+    for app_dir in "$dir/apps"/*/(N); do
       if [[ -f "$app_dir/pyproject.toml" ]] || [[ -f "$app_dir/setup.py" ]]; then
         langs+=(python); break
       fi
@@ -170,7 +170,7 @@ detect_project() {
      [[ -f "$dir/pom.xml" ]] || [[ -f "$dir/build.sbt" ]]; then
     langs+=(jvm)
   elif [[ -d "$dir/apps" ]]; then
-    for app_dir in "$dir/apps"/*/; do
+    for app_dir in "$dir/apps"/*/(N); do
       if [[ -f "$app_dir/build.gradle" ]] || [[ -f "$app_dir/build.gradle.kts" ]] || \
          [[ -f "$app_dir/pom.xml" ]] || [[ -f "$app_dir/build.sbt" ]]; then
         langs+=(jvm); break
@@ -182,7 +182,7 @@ detect_project() {
   if [[ -f "$dir/CMakeLists.txt" ]] || [[ -f "$dir/meson.build" ]]; then
     langs+=(c-cpp)
   elif [[ -d "$dir/apps" ]]; then
-    for app_dir in "$dir/apps"/*/; do
+    for app_dir in "$dir/apps"/*/(N); do
       if [[ -f "$app_dir/CMakeLists.txt" ]] || [[ -f "$app_dir/meson.build" ]]; then
         langs+=(c-cpp); break
       fi

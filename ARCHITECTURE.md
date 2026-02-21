@@ -36,6 +36,9 @@ resources/skills/         → Copied to repo's .claude/skills/ (agent knowledge)
     testing-principles/   → Test pyramid, AAA, mocking discipline
     observability/        → Logging, metrics, tracing
     data-integration/     → External API consumption patterns
+    react-patterns/       → React design principles and best practices
+    nextjs-patterns/      → Next.js App Router patterns and conventions
+    nx/                   → Nx monorepo tooling and features
   workflow-openspec/      → Installed when USE_OPENSPEC=true
   templates/              → User-selected technology templates with [FILL] markers
 resources/commands/       → Slash commands for Claude Code (OpenSpec only)

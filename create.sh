@@ -84,7 +84,7 @@ fi
 local -a available_templates=()
 for tdir in "$RL_ROOT"/resources/skills/templates/*/; do
   [[ -f "$tdir/SKILL.md" ]] || continue
-  local tname="${tdir:h:t}"
+  local tname="${${tdir%/}:t}"
   [[ "$tname" == "_TEMPLATE" ]] && continue
   available_templates+=("$tname")
 done

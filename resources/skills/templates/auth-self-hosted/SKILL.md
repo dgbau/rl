@@ -13,30 +13,18 @@ compliance needs, and team capacity.
 
 | Solution     | Language    | Best For                        | Complexity | Protocol Support     |
 |--------------|-------------|---------------------------------|------------|----------------------|
-| Lucia        | TypeScript  | Lightweight, any framework      | Low        | Session-based        |
-| Auth.js v5   | TypeScript  | Next.js / SvelteKit focused     | Low-Med    | OAuth, Credentials   |
 | Better Auth  | TypeScript  | TypeScript-first, plugin system | Low-Med    | OAuth, Email, Passkey|
+| Auth.js v5   | TypeScript  | Next.js / SvelteKit focused     | Low-Med    | OAuth, Credentials   |
 | Ory Stack    | Go          | Enterprise, microservices       | High       | OIDC, OAuth2, SAML   |
 | Keycloak     | Java        | Enterprise, legacy integration  | High       | OIDC, OAuth2, SAML   |
 
 ## Decision Criteria
 
-- **Small project, single framework**: Lucia or Better Auth
+- **Small project, TypeScript**: Better Auth (modern, plugin-based, actively maintained)
 - **Next.js ecosystem**: Auth.js v5 (best integration, large community)
 - **Multi-service architecture**: Ory Stack (dedicated identity service)
 - **Enterprise with SAML/SCIM**: Keycloak or Ory Hydra
-- **TypeScript-first with plugins**: Better Auth
 - [FILL: Decision rationale for this project's choice]
-
-## Lucia
-
-- Lightweight session library, not a full framework
-- You own the session table schema and user model
-- Works with any Node.js/Bun framework (Next.js, SvelteKit, Astro, Express)
-- Database adapters: Prisma, Drizzle, better-sqlite3, etc.
-- You implement login/signup/password hashing yourself (full control)
-- Best when: You want minimal abstraction over sessions
-- Docs: https://lucia-auth.com
 
 ## Auth.js / NextAuth v5
 
@@ -117,7 +105,6 @@ compliance needs, and team capacity.
 
 ## Common Pitfalls
 
-- Lucia: Forgetting to invalidate sessions on password change
 - Auth.js: Credentials provider doesn't support MFA out of the box
 - Ory: YAML config complexity, headless UI means building every auth page
 - Keycloak: Memory-hungry, theme customization is painful (FreeMarker templates)

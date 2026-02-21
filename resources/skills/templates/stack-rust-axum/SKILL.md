@@ -149,5 +149,5 @@ migrations/          # SQLx migrations
 
 - Forgetting `cargo sqlx prepare` before CI builds (offline mode stale)
 - Middleware ordering confusion (layers wrap in reverse order of declaration)
-- Axum extractor ordering matters: `State` must come last in handler params
+- Axum extractor ordering matters: body-consuming extractors (`Json`, `Form`, `Bytes`) must come last in handler params
 - [FILL: Project-specific gotchas encountered]
