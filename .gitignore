@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Ralph Loop working files (dogfooding)
+ralph/copilot-reviews.md
+ralph/e2e-results.md
+ralph/.e2e-*
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Node (if testing install locally)
+node_modules/
