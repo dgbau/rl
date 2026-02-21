@@ -33,6 +33,7 @@ A catalog of all available skill templates with descriptions, categories, and de
 | `c-cpp` | `CMakeLists.txt`, `meson.build` | C/C++ — build systems, sanitizers, memory safety, linting |
 | `swift-ios` | `*.xcodeproj`, `Package.swift` | Swift & iOS — SwiftUI, UIKit, SwiftData, concurrency, App Store deployment |
 | `audio-plugin` | JUCE, `nih-plug`, `iPlug2` in project | Audio plugin dev — VST3/AU/CLAP, real-time DSP, parameter management, distribution |
+| `creative-coding` | openFrameworks, Processing, p5.js | Generative art, installations, audio-reactive visuals, hardware integration |
 
 ## Technology Templates
 
