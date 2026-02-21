@@ -149,13 +149,22 @@ if [[ "$NO_PROMPT" != "true" ]]; then
       [[ "$deps_json" == *"d3"* || "$deps_json" == *"recharts"* || "$deps_json" == *"echarts"* ]] && suggested+=(data-visualization)
       [[ "$deps_json" == *"@payloadcms/"* ]]       && suggested+=(cms)
       [[ "$deps_json" == *"socket.io"* || "$deps_json" == *"ably"* ]] && suggested+=(realtime)
-
       # Stack detection
       if [[ "$deps_json" == *"next"* && "$deps_json" == *"@payloadcms/"* ]]; then
         suggested+=(stack-nextjs-payload)
       fi
       if [[ "$deps_json" == *"next"* && "$deps_json" == *"@trpc/"* && "$deps_json" == *"prisma"* ]]; then
         suggested+=(stack-t3)
+      fi
+    fi
+
+    # Python AI/ML detection (from pyproject.toml in root or apps/)
+    if [[ -f "$TARGET_DIR/pyproject.toml" ]]; then
+      local pyproject_content
+      pyproject_content=$(<"$TARGET_DIR/pyproject.toml")
+      if [[ "$pyproject_content" == *"torch"* || "$pyproject_content" == *"tensorflow"* || \
+            "$pyproject_content" == *"scikit-learn"* || "$pyproject_content" == *"sklearn"* ]]; then
+        suggested+=(python-ai-ml)
       fi
     fi
 

@@ -60,6 +60,7 @@ A catalog of all available skill templates with descriptions, categories, and de
 | `stripe` | `stripe` in deps | Checkout/Elements/Payment Intents, webhooks, subscriptions |
 | `shopify` | `@shopify/*` in deps | Hydrogen, Storefront API, Admin API, Liquid themes |
 | `cloudflare` | — | Workers, Pages, R2, D1, KV, Turnstile, Zero Trust |
+| `python-ai-ml` | `torch`, `tensorflow`, `sklearn` | ML/AI pipelines, CV, data analysis, model training/deployment |
 
 ## Stack Templates
 
