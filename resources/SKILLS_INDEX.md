@@ -34,6 +34,7 @@ A catalog of all available skill templates with descriptions, categories, and de
 | `swift-ios` | `*.xcodeproj`, `Package.swift` | Swift & iOS — SwiftUI, UIKit, SwiftData, concurrency, App Store deployment |
 | `audio-plugin` | JUCE, `nih-plug`, `iPlug2` in project | Audio plugin dev — VST3/AU/CLAP, real-time DSP, parameter management, distribution |
 | `creative-coding` | openFrameworks, Processing, p5.js | Generative art, installations, audio-reactive visuals, hardware integration |
+| `music-theory` | `mido`, `music21`, `tone.js` in project | Music theory, MIDI, notation, scores, chord progressions, modulation |
 
 ## Technology Templates
 
