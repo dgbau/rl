@@ -32,6 +32,7 @@ A catalog of all available skill templates with descriptions, categories, and de
 | `jvm` | `build.gradle*`, `pom.xml`, `build.sbt` | Java/Kotlin/Scala — build systems, frameworks, testing |
 | `c-cpp` | `CMakeLists.txt`, `meson.build` | C/C++ — build systems, sanitizers, memory safety, linting |
 | `swift-ios` | `*.xcodeproj`, `Package.swift` | Swift & iOS — SwiftUI, UIKit, SwiftData, concurrency, App Store deployment |
+| `audio-plugin` | JUCE, `nih-plug`, `iPlug2` in project | Audio plugin dev — VST3/AU/CLAP, real-time DSP, parameter management, distribution |
 
 ## Technology Templates
 
