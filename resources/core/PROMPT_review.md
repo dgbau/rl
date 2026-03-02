@@ -90,6 +90,48 @@ git commit -m "fix(review): address PR feedback
 git push
 ```
 
+### Phase 7: Reply to and Resolve Addressed Comments
+
+After committing and pushing, reply to each PR comment you addressed and resolve its thread.
+
+1. **Extract metadata** from `ralph/copilot-reviews.md`:
+   - Repository: from `Repository:` line (e.g. `owner/repo`)
+   - PR number: from the `# PR Review Comments (PR #N)` header
+   - Comment IDs and node IDs: from `<!-- comment_id: ID node_id: NODE_ID -->` annotations
+2. **Get the commit SHA** of the fix you just pushed:
+   ```bash
+   COMMIT_SHA=$(git rev-parse --short HEAD)
+   ```
+3. **For each addressed comment**, reply and resolve:
+   ```bash
+   # Step 1: Reply to the comment
+   gh api "repos/{owner}/{repo}/pulls/{pr}/comments/{comment_id}/replies" \
+     -f body="Fixed in ${COMMIT_SHA} — <brief description of what was done>"
+
+   # Step 2: Get the thread ID from the comment node_id
+   THREAD_ID=$(gh api graphql -f query='
+     query {
+       node(id: "{node_id}") {
+         ... on PullRequestReviewComment {
+           pullRequestReviewThread { id }
+         }
+       }
+     }' --jq '.data.node.pullRequestReviewThread.id')
+
+   # Step 3: Resolve the thread
+   gh api graphql -f query="
+     mutation {
+       resolveReviewThread(input: {threadId: \"$THREAD_ID\"}) {
+         thread { isResolved }
+       }
+     }"
+   ```
+   - For **code fixes**: reply with what was fixed and the commit
+   - For **invalid comments**: reply explaining why the comment doesn't apply
+   - For **design concerns** turned into tickets: reply with the ticket reference
+   - Keep replies concise (1-2 sentences max)
+4. **Skip** comments that weren't actionable or were already resolved
+
 ## Review-to-Skill Pipeline
 
 When code review feedback reveals a recurring pattern, antipattern, or convention that isn't captured in any existing skill, draft a new rule or section in the appropriate `.claude/skills/` file. If no appropriate skill exists, create one.

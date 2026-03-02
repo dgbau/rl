@@ -75,11 +75,77 @@ When OpenSpec is not enabled, record spec gaps in [`LESSONS.md`](../../LESSONS.m
 ### Invalid
 No code changes. Optionally document reasoning in commit message.
 
+## Replying to and Resolving Comments
+
+After fixing code and pushing, reply to each PR comment and resolve its thread.
+
+### Comment ID Extraction
+
+`fetch-reviews.sh` embeds comment IDs and GraphQL node IDs as HTML comments in the markdown output:
+```
+<!-- comment_id: 12345678 node_id: PRR_kwDOxxxxxxx -->
+```
+
+The repository and PR number are in the header:
+```
+# PR Review Comments (PR #42)
+Repository: `owner/repo`
+```
+
+### Replying via GitHub API
+
+```bash
+# Get the fix commit SHA
+COMMIT_SHA=$(git rev-parse --short HEAD)
+
+# Reply to a specific comment
+gh api "repos/{owner}/{repo}/pulls/{pr}/comments/{comment_id}/replies" \
+  -f body="Fixed in ${COMMIT_SHA} — <brief description>"
+```
+
+### Resolving Threads via GraphQL
+
+After replying, resolve the thread so it collapses in the PR:
+
+```bash
+# Get the thread ID from the comment's node_id
+THREAD_ID=$(gh api graphql -f query='
+  query {
+    node(id: "{node_id}") {
+      ... on PullRequestReviewComment {
+        pullRequestReviewThread { id }
+      }
+    }
+  }' --jq '.data.node.pullRequestReviewThread.id')
+
+# Resolve the thread
+gh api graphql -f query="
+  mutation {
+    resolveReviewThread(input: {threadId: \"$THREAD_ID\"}) {
+      thread { isResolved }
+    }
+  }"
+```
+
+### Reply Guidelines
+
+| Category | Reply |
+|----------|-------|
+| **Code fix** | "Fixed in `abc1234` — added null check for empty array case" |
+| **Design concern** | "Tracked in ticket `pro-xxxx` for follow-up" |
+| **Invalid** | "This doesn't apply — the variable is used in the closure on line N" |
+| **Spec gap** | "Added to LESSONS.md / updated spec" |
+
+- Keep replies concise (1-2 sentences)
+- Always reference the commit SHA for code fixes
+- Always resolve the thread after replying
+
 ## PR Safety
 
 Ralph **never** merges or closes PRs. The review mode uses the [GitHub CLI](https://cli.github.com/) to:
 - Create draft PRs (`gh pr create --draft`)
 - Mark PRs as ready (`gh pr ready`)
 - Edit PR descriptions (`gh pr edit`)
+- Reply to review comments (`gh api .../replies`)
 
 That's it. A human always performs the final merge.

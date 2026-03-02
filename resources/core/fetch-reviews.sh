@@ -45,6 +45,7 @@ ALL_COMMENTS=$(gh api "repos/$REPO_FULL/pulls/$PR_NUMBER/comments" \
     body: .body,
     diff_hunk: .diff_hunk,
     id: .id,
+    node_id: .node_id,
     created_at: .created_at,
     author: .user.login,
     author_type: (if .user.login == "copilot-pull-request-reviewer" then "copilot"
@@ -77,6 +78,7 @@ fi
   echo "# PR Review Comments (PR #$PR_NUMBER)"
   echo ""
   echo "Branch: \`$BRANCH\`"
+  echo "Repository: \`$REPO_FULL\`"
   echo "Fetched: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
   echo ""
 
@@ -84,7 +86,7 @@ fi
   if [[ -n "$ALL_REVIEWS" ]]; then
     echo "## Review Summaries"
     echo ""
-    echo "$ALL_REVIEWS" | jq -r '"### \(.author) (\(.author_type)) -- \(.state) -- \(.created_at)\n\n\(.body)\n"' 2>/dev/null || true
+    echo "$ALL_REVIEWS" | jq -r '"### \(.author) (\(.author_type)) -- \(.state) -- \(.created_at)\n<!-- review_id: \(.id) -->\n\n\(.body)\n"' 2>/dev/null || true
   fi
 
   # Human line comments first (higher priority)
@@ -93,7 +95,7 @@ fi
   if [[ "$HUMAN_COUNT" -gt 0 ]]; then
     echo "## Human Review Comments ($HUMAN_COUNT)"
     echo ""
-    echo "$HUMAN_COMMENTS" | jq -r '.[] | "### \(.author): `\(.path)` (line \(.line))\n\n> \(.body | gsub("\n"; "\n> "))\n\n<details><summary>Diff hunk</summary>\n\n```diff\n\(.diff_hunk)\n```\n\n</details>\n"' 2>/dev/null || true
+    echo "$HUMAN_COMMENTS" | jq -r '.[] | "### \(.author): `\(.path)` (line \(.line))\n<!-- comment_id: \(.id) node_id: \(.node_id) -->\n\n> \(.body | gsub("\n"; "\n> "))\n\n<details><summary>Diff hunk</summary>\n\n```diff\n\(.diff_hunk)\n```\n\n</details>\n"' 2>/dev/null || true
   fi
 
   # Copilot/bot line comments
@@ -102,7 +104,7 @@ fi
   if [[ "$BOT_COUNT" -gt 0 ]]; then
     echo "## Copilot/Bot Review Comments ($BOT_COUNT)"
     echo ""
-    echo "$BOT_COMMENTS" | jq -r '.[] | "### \(.author): `\(.path)` (line \(.line))\n\n> \(.body | gsub("\n"; "\n> "))\n\n<details><summary>Diff hunk</summary>\n\n```diff\n\(.diff_hunk)\n```\n\n</details>\n"' 2>/dev/null || true
+    echo "$BOT_COMMENTS" | jq -r '.[] | "### \(.author): `\(.path)` (line \(.line))\n<!-- comment_id: \(.id) node_id: \(.node_id) -->\n\n> \(.body | gsub("\n"; "\n> "))\n\n<details><summary>Diff hunk</summary>\n\n```diff\n\(.diff_hunk)\n```\n\n</details>\n"' 2>/dev/null || true
   fi
 } > "$OUTPUT_FILE"
 
