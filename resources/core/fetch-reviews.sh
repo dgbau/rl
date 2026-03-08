@@ -33,11 +33,19 @@ if [[ -z "$REPO_FULL" ]]; then
   exit 2
 fi
 
+# Use temp files to avoid shell variable mangling of JSON with control characters
+# (diff_hunk fields contain tabs/newlines that break echo | jq pipelines)
+TMPDIR_REVIEWS=$(mktemp -d)
+trap 'rm -rf "$TMPDIR_REVIEWS"' EXIT
+COMMENTS_FILE="$TMPDIR_REVIEWS/comments.json"
+REVIEWS_FILE="$TMPDIR_REVIEWS/reviews.json"
+
 # Fetch ALL line-level review comments (not just Copilot)
 # Filter: root comments only (not replies), not resolved
-ALL_COMMENTS=$(gh api "repos/$REPO_FULL/pulls/$PR_NUMBER/comments" \
+# Output as a proper JSON array to avoid JSONL parsing issues
+gh api "repos/$REPO_FULL/pulls/$PR_NUMBER/comments" \
   --paginate \
-  --jq '.[] | select(
+  --jq '[.[] | select(
     (.in_reply_to_id == null) or (.in_reply_to_id == 0)
   ) | {
     path: .path,
@@ -51,12 +59,18 @@ ALL_COMMENTS=$(gh api "repos/$REPO_FULL/pulls/$PR_NUMBER/comments" \
     author_type: (if .user.login == "copilot-pull-request-reviewer" then "copilot"
                   elif .user.type == "Bot" then "bot"
                   else "human" end)
-  }' 2>/dev/null || echo "")
+  }]' > "$COMMENTS_FILE" 2>/dev/null || echo "[]" > "$COMMENTS_FILE"
+
+# When --paginate returns multiple pages, each page produces a separate JSON array.
+# Merge them into a single flat array.
+if jq -e 'type == "array" and length > 0 and (.[0] | type == "array")' "$COMMENTS_FILE" >/dev/null 2>&1; then
+  jq '[.[][]]' "$COMMENTS_FILE" > "$COMMENTS_FILE.tmp" && mv "$COMMENTS_FILE.tmp" "$COMMENTS_FILE"
+fi
 
 # Fetch ALL top-level reviews (summary comments, not just Copilot)
-ALL_REVIEWS=$(gh api "repos/$REPO_FULL/pulls/$PR_NUMBER/reviews" \
+gh api "repos/$REPO_FULL/pulls/$PR_NUMBER/reviews" \
   --paginate \
-  --jq '.[] | select(.state != "DISMISSED") | select(.body != null and .body != "") | {
+  --jq '[.[] | select(.state != "DISMISSED") | select(.body != null and .body != "") | {
     body: .body,
     state: .state,
     id: .id,
@@ -65,9 +79,17 @@ ALL_REVIEWS=$(gh api "repos/$REPO_FULL/pulls/$PR_NUMBER/reviews" \
     author_type: (if .user.login == "copilot-pull-request-reviewer" then "copilot"
                   elif .user.type == "Bot" then "bot"
                   else "human" end)
-  }' 2>/dev/null || echo "")
+  }]' > "$REVIEWS_FILE" 2>/dev/null || echo "[]" > "$REVIEWS_FILE"
 
-if [[ -z "$ALL_COMMENTS" && -z "$ALL_REVIEWS" ]]; then
+# Merge paginated review arrays too
+if jq -e 'type == "array" and length > 0 and (.[0] | type == "array")' "$REVIEWS_FILE" >/dev/null 2>&1; then
+  jq '[.[][]]' "$REVIEWS_FILE" > "$REVIEWS_FILE.tmp" && mv "$REVIEWS_FILE.tmp" "$REVIEWS_FILE"
+fi
+
+TOTAL_COMMENTS=$(jq 'length' "$COMMENTS_FILE" 2>/dev/null || echo "0")
+TOTAL_REVIEWS=$(jq 'length' "$REVIEWS_FILE" 2>/dev/null || echo "0")
+
+if [[ "$TOTAL_COMMENTS" -eq 0 && "$TOTAL_REVIEWS" -eq 0 ]]; then
   echo "No PR review comments found."
   rm -f "$OUTPUT_FILE"
   exit 1
@@ -83,33 +105,28 @@ fi
   echo ""
 
   # Top-level review summaries
-  if [[ -n "$ALL_REVIEWS" ]]; then
+  if [[ "$TOTAL_REVIEWS" -gt 0 ]]; then
     echo "## Review Summaries"
     echo ""
-    echo "$ALL_REVIEWS" | jq -r '"### \(.author) (\(.author_type)) -- \(.state) -- \(.created_at)\n<!-- review_id: \(.id) -->\n\n\(.body)\n"' 2>/dev/null || true
+    jq -r '.[] | "### \(.author) (\(.author_type)) -- \(.state) -- \(.created_at)\n<!-- review_id: \(.id) -->\n\n\(.body)\n"' "$REVIEWS_FILE" 2>/dev/null || true
   fi
 
   # Human line comments first (higher priority)
-  HUMAN_COMMENTS=$(echo "$ALL_COMMENTS" | jq -s '[.[] | select(.author_type == "human")]' 2>/dev/null || echo "[]")
-  HUMAN_COUNT=$(echo "$HUMAN_COMMENTS" | jq 'length' 2>/dev/null || echo "0")
+  HUMAN_COUNT=$(jq '[.[] | select(.author_type == "human")] | length' "$COMMENTS_FILE" 2>/dev/null || echo "0")
   if [[ "$HUMAN_COUNT" -gt 0 ]]; then
     echo "## Human Review Comments ($HUMAN_COUNT)"
     echo ""
-    echo "$HUMAN_COMMENTS" | jq -r '.[] | "### \(.author): `\(.path)` (line \(.line))\n<!-- comment_id: \(.id) node_id: \(.node_id) -->\n\n> \(.body | gsub("\n"; "\n> "))\n\n<details><summary>Diff hunk</summary>\n\n```diff\n\(.diff_hunk)\n```\n\n</details>\n"' 2>/dev/null || true
+    jq -r '[.[] | select(.author_type == "human")] | .[] | "### \(.author): `\(.path)` (line \(.line))\n<!-- comment_id: \(.id) node_id: \(.node_id) -->\n\n> \(.body | gsub("\n"; "\n> "))\n\n<details><summary>Diff hunk</summary>\n\n```diff\n\(.diff_hunk)\n```\n\n</details>\n"' "$COMMENTS_FILE" 2>/dev/null || true
   fi
 
   # Copilot/bot line comments
-  BOT_COMMENTS=$(echo "$ALL_COMMENTS" | jq -s '[.[] | select(.author_type != "human")]' 2>/dev/null || echo "[]")
-  BOT_COUNT=$(echo "$BOT_COMMENTS" | jq 'length' 2>/dev/null || echo "0")
+  BOT_COUNT=$(jq '[.[] | select(.author_type != "human")] | length' "$COMMENTS_FILE" 2>/dev/null || echo "0")
   if [[ "$BOT_COUNT" -gt 0 ]]; then
     echo "## Copilot/Bot Review Comments ($BOT_COUNT)"
     echo ""
-    echo "$BOT_COMMENTS" | jq -r '.[] | "### \(.author): `\(.path)` (line \(.line))\n<!-- comment_id: \(.id) node_id: \(.node_id) -->\n\n> \(.body | gsub("\n"; "\n> "))\n\n<details><summary>Diff hunk</summary>\n\n```diff\n\(.diff_hunk)\n```\n\n</details>\n"' 2>/dev/null || true
+    jq -r '[.[] | select(.author_type != "human")] | .[] | "### \(.author): `\(.path)` (line \(.line))\n<!-- comment_id: \(.id) node_id: \(.node_id) -->\n\n> \(.body | gsub("\n"; "\n> "))\n\n<details><summary>Diff hunk</summary>\n\n```diff\n\(.diff_hunk)\n```\n\n</details>\n"' "$COMMENTS_FILE" 2>/dev/null || true
   fi
 } > "$OUTPUT_FILE"
-
-TOTAL_COMMENTS=$(echo "$ALL_COMMENTS" | jq -s 'length' 2>/dev/null || echo "0")
-TOTAL_REVIEWS=$(echo "$ALL_REVIEWS" | jq -s 'length' 2>/dev/null || echo "0")
 
 echo "Found $TOTAL_COMMENTS line comments ($HUMAN_COUNT human, $BOT_COUNT bot) and $TOTAL_REVIEWS review summaries."
 echo "Written to: $OUTPUT_FILE"

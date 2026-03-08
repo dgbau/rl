@@ -149,6 +149,8 @@ if [[ "$NO_PROMPT" != "true" ]]; then
       [[ "$deps_json" == *"d3"* || "$deps_json" == *"recharts"* || "$deps_json" == *"echarts"* ]] && suggested+=(data-visualization)
       [[ "$deps_json" == *"@payloadcms/"* ]]       && suggested+=(cms)
       [[ "$deps_json" == *"socket.io"* || "$deps_json" == *"ably"* ]] && suggested+=(realtime)
+      [[ "$deps_json" == *"electron"* ]]           && suggested+=(electron)
+      [[ "$deps_json" == *"@anthropic-ai/sdk"* ]]  && suggested+=(anthropic-sdk)
       # Stack detection
       if [[ "$deps_json" == *"next"* && "$deps_json" == *"@payloadcms/"* ]]; then
         suggested+=(stack-nextjs-payload)

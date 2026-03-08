@@ -435,3 +435,84 @@ Replace V7 with a dominant 7th a tritone away: G7 → Db7 (both share the triton
 - MusicXML export losing articulations — validate round-trip fidelity between notation tools
 - SoundFont quality varies wildly — test with target SoundFont before committing to MIDI-based output
 - [FILL: Project-specific gotchas encountered]
+
+
+## midi-writer-js
+
+# midi-writer-js Skill
+
+<!-- category: template -->
+
+## Overview
+midi-writer-js is a JavaScript library for programmatically generating MIDI files, compatible with both browser environments and Node.js. It provides a high-level API for creating tracks, adding notes, setting tempo/time signature, and exporting the result as a `.mid` file or base64 data URI.
+[FILL: How midi-writer-js is used in this project — e.g., exporting chord progressions, generating backing tracks, one-shot exports vs. real-time generation]
+
+## Core Setup
+- Version: [FILL: midi-writer-js version pinned in package.json]
+- Import style: [FILL: ESM (`import MidiWriter from 'midi-writer-js'`) or CJS (`require`)]
+- Browser vs Node: [FILL: Which environment(s) this project targets for MIDI export]
+- Integration: [FILL: How the MIDI export hooks into the rest of the app — e.g., triggered by a "Download MIDI" button, called from a service/util module]
+
+## API Patterns
+
+### Basic Track Construction
+```js
+const track = new MidiWriter.Track();
+track.setTempo(120);
+track.addEvent(new MidiWriter.ProgramChangeEvent({ instrument: 1 }));
+track.addEvent(new MidiWriter.NoteEvent({
+  pitch: ['C4', 'E4', 'G4'],
+  duration: '1',
+  sequential: false, // false = chord, true = arpeggio
+}));
+const writer = new MidiWriter.Writer([track]);
+const dataUri = writer.dataUri(); // or writer.buildFile() for Buffer
+```
+
+### Chord Progression Export
+- Each chord maps to a `NoteEvent` with an array of pitch strings
+- Duration values: `'1'` whole, `'2'` half, `'4'` quarter, `'8'` eighth, `'d4'` dotted quarter, etc.
+- [FILL: How chord objects in this project are translated to pitch arrays — e.g., which field holds note names, enharmonic spelling conventions]
+
+## Architecture & Patterns
+[FILL: Where MIDI generation lives in the codebase — dedicated service, utility function, component-level handler]
+- Pattern: [FILL: e.g., pure function `progressionToMidi(chords) => Blob` vs. class-based service]
+- Structure: [FILL: File(s) responsible for MIDI export logic]
+- Output: [FILL: How the file is delivered to the user — `<a download>` trigger, FileSaver.js, Node `fs.writeFile`, etc.]
+
+## Project Conventions
+[FILL: Project-specific conventions around MIDI export]
+- Naming: [FILL: Naming for export functions, generated filenames, e.g., `${progressionName}-${bpm}bpm.mid`]
+- Organization: [FILL: Path to MIDI utility/service files]
+- Tempo source: [FILL: Where BPM comes from — global state, per-progression setting, hardcoded default]
+- Instrument: [FILL: Default GM program number used, e.g., `0` = Acoustic Grand Piano]
+
+## Key Constraints
+- [FILL: Browser download approach — data URI vs. Blob URL, IE/Safari compatibility needs]
+- [FILL: Max polyphony or track count requirements]
+- Note pitch format must be a string like `'C4'`, `'F#3'` — not MIDI numbers (use `NoteEvent` pitch array, not `wait` offsets, for chords)
+- Sequential vs. chord: `sequential: false` groups pitches into a chord; `sequential: true` plays them one after another
+- [FILL: Any constraints on file size or duration for the export use case]
+
+## Workflow
+- Development: [FILL: How to test MIDI export locally — e.g., open generated file in DAW, use online MIDI player]
+- Building: [FILL: Any bundler config needed — midi-writer-js ships CJS; confirm ESM interop if using Vite/esbuild]
+- Debugging: [FILL: Tools used to inspect generated MIDI — e.g., MIDI Monitor, `midi-file` npm package for parsing output in tests]
+
+## Where to Look
+- Source code: [FILL: Path to MIDI export utility, e.g., `src/lib/midi-export.ts`]
+- Types/interfaces: [FILL: Path to type definitions for chord/note structures passed into the exporter]
+- Examples: [FILL: Path to existing export usage in the codebase]
+- Docs: https://grimmdude.com/MidiWriterJS/docs/ and https://github.com/grimmdude/MidiWriterJS
+
+## Dependencies & Related Skills
+- [FILL: Related skill for chord/music-theory data structures fed into MIDI export]
+- [FILL: File-save utility used alongside midi-writer-js, e.g., `file-saver`, native `<a>` download]
+- [FILL: Audio playback skill/library if MIDI export complements in-browser playback]
+
+## Common Pitfalls
+- Pitch strings are case-sensitive and octave-required: `'c4'` may fail — use `'C4'`
+- `writer.dataUri()` returns a full `data:audio/midi;base64,...` string; strip the prefix if you need raw base64
+- Each `Track` is independent — tempo must be set per-track if using multiple tracks
+- [FILL: Any discovered issues with the version in use — e.g., ESM import quirks under specific bundler versions]
+- [FILL: Known enharmonic spelling issues, e.g., `Bb4` vs `A#4` and which the project standardizes on]

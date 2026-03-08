@@ -21,7 +21,7 @@ zsh -n rl create.sh install.sh skills.sh lib/common.sh
 | File | Purpose |
 |------|---------|
 | `rl` | CLI entry point (dispatcher) |
-| `create.sh` | Scaffold new Nx project |
+| `create.sh` | Scaffold new Nx project (supports `--no-prompt` for programmatic use) |
 | `install.sh` | Add Ralph Loop to existing repo |
 | `skills.sh` | Manage skill templates |
 | `lib/common.sh` | Shared utilities (detection, prompts, generation) |

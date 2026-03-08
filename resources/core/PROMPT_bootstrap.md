@@ -4,7 +4,7 @@ You are an autonomous orchestration agent in this project.
 
 ## Your Job
 
-Read the proposal, analyze the codebase, then create an epic ticket and 3-8 chunky task tickets with dependencies. **Do NOT implement any code.**
+Read the proposal, analyze the codebase, then create an epic ticket and right-sized task tickets with dependencies. **Do NOT implement any code.**
 
 ## Steps
 
@@ -56,7 +56,7 @@ Read the proposal, analyze the codebase, then create an epic ticket and 3-8 chun
 
    Note the epic ID printed by this command.
 
-5. **Create 3-8 task tickets:**
+5. **Create task tickets:**
    For each deliverable chunk, create a task ticket:
    ```bash
    tk create "<Task Title>" \
@@ -97,10 +97,27 @@ Read the proposal, analyze the codebase, then create an epic ticket and 3-8 chun
      ```
    - Push: `git push`
 
-## Ticket Design Guidelines
+## Ticket Sizing Criteria
 
-- **3-8 tickets per epic** -- each is a meaningful deliverable, not a single checkbox
-- **Chunky, not granular** -- "Implement Auth API" not "Create auth controller" + "Add JWT validation" + "Write auth tests"
+Each ticket must satisfy ALL four criteria:
+
+- **Independently testable** -- After completion, you can verify it works without anything that comes later. If you can't write a test or demonstrate it, the boundaries are wrong.
+- **Leaves the project buildable** -- Backpressure (lint + test + build) passes after every ticket. No ticket leaves things broken.
+- **Completable in one build iteration** -- A single Claude session can finish it with tests and passing backpressure. If not, split it.
+- **Meaningful** -- It adds a real capability, not just a type definition or config file. You should be able to describe what's new in one sentence.
+
+The right number of tickets falls out of applying these criteria to the plan. Small changes may need 2-3 tickets. Large projects may need 15+. Do not target an arbitrary count.
+
+## Ordering Methodology
+
+Analyze the plan as a directed acyclic graph (DAG). Look for three kinds of ordering constraints:
+
+1. **Hard dependencies** -- A literally cannot exist without B. The UI can't call a service that doesn't exist. Tests can't verify features that aren't built. These are the edges in the dependency graph. Use `tk dep` for these.
+2. **Risk ordering** -- High-risk items (native modules, complex integrations, novel architecture) go first. If they fail, everything built on top is wasted. Assign these priority 0.
+3. **Vertical slices over horizontal layers** -- Prefer "thin feature that works end-to-end" over "build all of layer X, then all of layer Y." Vertical slices catch integration problems early.
+
+## Ticket Content Guidelines
+
 - **Include testing** -- each task's acceptance criteria should mention test requirements
 - **Reference skills** -- list which [`.claude/skills/`](../.claude/skills/) are relevant for the task
 - **Predict files** -- mention which files will likely be created or modified

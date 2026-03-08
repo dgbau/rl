@@ -66,6 +66,8 @@ A catalog of all available skill templates with descriptions, categories, and de
 | `cloudflare` | — | Workers, Pages, R2, D1, KV, Turnstile, Zero Trust |
 | `python-ai-ml` | `torch`, `tensorflow`, `sklearn` | ML/AI pipelines, CV, data analysis, model training/deployment |
 | `raspberry-pi` | — | GPIO, sensors, touchscreen UI, camera, motors, kiosk deployment |
+| `electron` | `electron` in deps | Desktop apps — CJS/ESM, IPC, preload, native modules, packaging |
+| `anthropic-sdk` | `@anthropic-ai/sdk` in deps | Claude API — streaming, tool use, vision, error handling, cost |
 
 ## Stack Templates
 

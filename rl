@@ -23,7 +23,7 @@ case "${1:-}" in
     print "Usage: rl <command> [args...]"
     print ""
     print "Commands:"
-    print "  create          Create a new Nx project with Ralph Loop"
+    print "  create          Create a new Nx project with Ralph Loop (--help for flags)"
     print "  install [dir]   Add Ralph Loop to an existing repository"
     print "  skills          Manage skill templates (list, add, new)"
     print ""
