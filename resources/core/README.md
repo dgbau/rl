@@ -12,12 +12,12 @@ Ralph **never** merges or closes PRs. A human always performs the final merge.
 
 | Command | Mode | What it does |
 |---------|------|--------------|
-| `./ralph/loop.sh interview` | Interview | Claude interviews you, creates proposal + `IMPLEMENTATION_PLAN.md`. Always interactive. |
-| `./ralph/loop.sh bootstrap` | Bootstrap | Reads proposal, creates `tk` epic + 3-8 task tickets. No code written. |
-| `./ralph/loop.sh` | Build | Picks next ready task ticket, implements, tests, commits. One ticket per iteration. |
-| `./ralph/loop.sh archive` | Archive | Merges completed OpenSpec delta specs into `openspec/specs/`. Requires `USE_OPENSPEC=true`. |
-| `./ralph/loop.sh review` | Review | Fetches all PR reviews (human + Copilot), triages, fixes code, creates/amends tickets. |
-| `./ralph/loop.sh e2e` | E2E | Runs E2E tests, fixes failures. |
+| `rl loop interview` | Interview | Claude interviews you, creates proposal + `IMPLEMENTATION_PLAN.md`. Always interactive. |
+| `rl loop bootstrap` | Bootstrap | Reads proposal, creates `tk` epic + 3-8 task tickets. No code written. |
+| `rl loop` | Build | Picks next ready task ticket, implements, tests, commits. One ticket per iteration. |
+| `rl loop archive` | Archive | Merges completed OpenSpec delta specs into `openspec/specs/`. Requires `USE_OPENSPEC=true`. |
+| `rl loop review` | Review | Fetches all PR reviews (human + Copilot), triages, fixes code, creates/amends tickets. |
+| `rl loop e2e` | E2E | Runs E2E tests, fixes failures. |
 
 ### Flags
 
@@ -34,16 +34,16 @@ Ralph **never** merges or closes PRs. A human always performs the final merge.
 
 ```bash
 # Interactive workflow
-./ralph/loop.sh interview            # Claude interviews you -> proposal
-./ralph/loop.sh bootstrap            # Create tickets from proposal
-./ralph/loop.sh                      # Build one ticket, review
-./ralph/loop.sh --push               # Build one ticket + push
+rl loop interview            # Claude interviews you -> proposal
+rl loop bootstrap            # Create tickets from proposal
+rl loop                      # Build one ticket, review
+rl loop --push               # Build one ticket + push
 
 # Autonomous workflow (after interview)
-./ralph/loop.sh --auto --pr          # Bootstrap -> build all -> archive -> PR
-./ralph/loop.sh --auto --pr 10       # Same, max 10 build iterations
-./ralph/loop.sh review --auto --pr   # Address PR reviews headlessly
-./ralph/loop.sh e2e --auto           # Fix E2E failures headlessly
+rl loop --auto --pr          # Bootstrap -> build all -> archive -> PR
+rl loop --auto --pr 10       # Same, max 10 build iterations
+rl loop review --auto --pr   # Address PR reviews headlessly
+rl loop e2e --auto           # Fix E2E failures headlessly
 ```
 
 > Always start from a feature branch (e.g., `ralph/my-feature`). The loop refuses to run on the base branch or `main`.
@@ -73,11 +73,11 @@ The Ralph Loop (conceived by [Geoffrey Huntley](https://ghuntley.com/stdlib), na
 
 ---
 
-## .ralphrc Configuration
+## .rl/config Configuration
 
-The loop reads `.ralphrc` from the project root. Environment variables override `.ralphrc` values, which override defaults.
+The loop reads `.rl/config` from the project root. Environment variables override `.rl/config` values, which override defaults.
 
-| `.ralphrc` key | Env override | Default | Description |
+| `.rl/config` key | Env override | Default | Description |
 |----------------|-------------|---------|-------------|
 | `PROJECT_NAME` | -- | -- | Project identifier (ticket prefixes, PR titles) |
 | `BASE_BRANCH` | `RALPH_BASE_BRANCH` | `main` | Target branch for PRs |
@@ -106,19 +106,19 @@ USE_OPENSPEC=false
 
 | File/Dir | Purpose | Git? |
 |----------|---------|------|
-| `.ralphrc` | Loop configuration | Yes |
+| `.rl/config` | Loop configuration | Yes |
 | `.tickets/` | Task tickets (`tk`) | Yes |
 | `.claude/skills/` | Agent skills | Yes |
 | `IMPLEMENTATION_PLAN.md` | Vision doc from interview | Yes |
 | `LESSONS.md` | Cumulative learnings (append-only) | Yes |
 | `AGENTS.md` | Operational guide | Yes |
 | `CLAUDE.md` | Claude Code root config | Yes |
-| `ralph/loop.sh` | Loop orchestrator | Yes |
-| `ralph/PROMPT_*.md` | Mode-specific prompts (6 files) | Yes |
-| `ralph/fetch-reviews.sh` | Fetches PR reviews via `gh` | Yes |
-| `ralph/run-e2e.sh` | Runs E2E tests, captures failures | Yes |
-| `ralph/copilot-reviews.md` | Fetched reviews (working file) | No |
-| `ralph/e2e-results.md` | E2E failures (working file) | No |
+| `rl loop` (in rl toolkit) | Loop orchestrator | N/A (sourced from rl) |
+| `PROMPT_*.md` (in rl toolkit) | Mode-specific prompts (7 files) | N/A (sourced from rl) |
+| `.rl/config` | Project configuration | Yes |
+| `.rl/copilot-reviews.md` | Fetched reviews (working file) | No |
+| `.rl/review-manifest.json` | Review reply manifest (working file) | No |
+| `.rl/e2e-results.md` | E2E failures (working file) | No |
 | `openspec/` | Specs and changes (if `USE_OPENSPEC=true`) | Yes |
 
 ---
@@ -182,10 +182,10 @@ Full autonomous workflow:
 
 ```bash
 git checkout -b ralph/my-feature
-./ralph/loop.sh interview        # Must be interactive
-./ralph/loop.sh --auto --pr      # Bootstrap -> build -> archive -> PR
-./ralph/loop.sh e2e --auto       # Fix E2E failures
-./ralph/loop.sh review --auto    # Address review feedback
+rl loop interview        # Must be interactive
+rl loop --auto --pr      # Bootstrap -> build -> archive -> PR
+rl loop e2e --auto       # Fix E2E failures
+rl loop review --auto    # Address review feedback
 # Human reviews and merges.
 ```
 
@@ -291,22 +291,22 @@ If backpressure fails, Claude gets one self-heal attempt. If it fails again, the
 
 ```bash
 git checkout -b ralph/my-feature
-./ralph/loop.sh interview        # Interview -> proposal
-./ralph/loop.sh bootstrap        # Create tickets
-./ralph/loop.sh                  # Build one ticket
-./ralph/loop.sh --push           # Build + push
-./ralph/loop.sh e2e              # Fix E2E failures
-./ralph/loop.sh review --push    # Address PR feedback
+rl loop interview        # Interview -> proposal
+rl loop bootstrap        # Create tickets
+rl loop                  # Build one ticket
+rl loop --push           # Build + push
+rl loop e2e              # Fix E2E failures
+rl loop review --push    # Address PR feedback
 ```
 
 ### Autonomous
 
 ```bash
 git checkout -b ralph/my-feature
-./ralph/loop.sh interview        # Must be interactive
-./ralph/loop.sh --auto --pr      # Bootstrap -> build -> archive -> PR
-./ralph/loop.sh e2e --auto
-./ralph/loop.sh review --auto --pr
+rl loop interview        # Must be interactive
+rl loop --auto --pr      # Bootstrap -> build -> archive -> PR
+rl loop e2e --auto
+rl loop review --auto --pr
 # Human reviews and merges.
 ```
 
@@ -314,7 +314,7 @@ git checkout -b ralph/my-feature
 
 ```bash
 tk ready                         # See what's next
-./ralph/loop.sh                  # Picks up where it left off
+rl loop                  # Picks up where it left off
 ```
 
 ---
@@ -323,10 +323,10 @@ tk ready                         # See what's next
 
 1. **Watch the first few iterations** -- spot agent mistake patterns
 2. **Add guardrails to `AGENTS.md`** -- specific instructions prevent repeated errors
-3. **Refine prompts** in `ralph/PROMPT_*.md` for your project
+3. **Override skills** in `.rl/skills/` for project-specific customization
 4. **Append to `LESSONS.md`** -- the agent reads this; documenting pitfalls helps future iterations
 5. **Add skills** in `.claude/skills/` for domain-specific guidance
-6. **Tune `.ralphrc`** -- adjust `BACKPRESSURE_CMD`, `MAX_ITERATIONS`, `REVIEW_WAIT`
+6. **Tune `.rl/config`** -- adjust `BACKPRESSURE_CMD`, `MAX_ITERATIONS`, `REVIEW_WAIT`
 
 ---
 
@@ -352,7 +352,7 @@ The `--dangerously-skip-permissions` flag lets Claude Code run commands without 
 This Ralph Loop was installed by the [rl toolkit](https://github.com/wedow/rl). To update:
 
 1. The `self-update` skill in `.claude/skills/self-update/` guides updating from `~/src/rl/resources/`
-2. Or manually: `cp ~/src/rl/resources/core/* ralph/` (preserving `.ralphrc`)
+2. Or manually: `rl update` (pulls latest from rl repo)
 
 ---
 

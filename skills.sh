@@ -69,9 +69,99 @@ cmd_add() {
     exit 1
   fi
 
-  local dst="$REPO_ROOT/.claude/skills/$name"
-  copy_dir_safe "$src" "$dst"
-  print -P "${G}${B}Installed skill template:${R} $name -> .claude/skills/$name/"
+  # Install to .rl/skills/ (project override) so it persists across skill syncs
+  local dst="$REPO_ROOT/.rl/skills/$name"
+  mkdir -p "$dst"
+  cp "$src/SKILL.md" "$dst/"
+  print -P "${G}${B}Installed skill template:${R} $name -> .rl/skills/$name/"
+  print -P "${D}This skill will override the source version during rl loop runs.${R}"
+}
+
+cmd_sync() {
+  if [[ -z "$REPO_ROOT" ]]; then
+    print -P "${ERR}${B}Error:${R} Not inside a git repository."
+    exit 1
+  fi
+
+  setopt local_options nullglob
+
+  print -P "${C}${B}Syncing skills from rl source...${R}"
+
+  local skills_src="$RL_ROOT/resources/skills"
+  mkdir -p "$REPO_ROOT/.claude/skills"
+
+  local count=0
+
+  # Workflow skills (always)
+  for skill_dir in "$skills_src/workflow"/*/; do
+    [[ -d "$skill_dir" ]] || continue
+    local skill_name="${skill_dir:t}"
+    mkdir -p "$REPO_ROOT/.claude/skills/$skill_name"
+    cp "$skill_dir/SKILL.md" "$REPO_ROOT/.claude/skills/$skill_name/"
+    count=$((count + 1))
+  done
+
+  # OpenSpec skills (if configured)
+  local use_openspec=false
+  if [[ -f "$REPO_ROOT/.rl/config" ]]; then
+    ( set +u; source "$REPO_ROOT/.rl/config"; print "${USE_OPENSPEC:-false}" ) | read use_openspec
+  elif [[ -f "$REPO_ROOT/.ralphrc" ]]; then
+    ( set +u; source "$REPO_ROOT/.ralphrc"; print "${USE_OPENSPEC:-false}" ) | read use_openspec
+  fi
+
+  if [[ "$use_openspec" == "true" && -d "$skills_src/workflow-openspec" ]]; then
+    for skill_dir in "$skills_src/workflow-openspec"/*/; do
+      [[ -d "$skill_dir" ]] || continue
+      local skill_name="${skill_dir:t}"
+      mkdir -p "$REPO_ROOT/.claude/skills/$skill_name"
+      cp "$skill_dir/SKILL.md" "$REPO_ROOT/.claude/skills/$skill_name/"
+      count=$((count + 1))
+    done
+  fi
+
+  # Apply project overrides last (highest precedence)
+  local override_count=0
+  if [[ -d "$REPO_ROOT/.rl/skills" ]]; then
+    for skill_dir in "$REPO_ROOT/.rl/skills"/*/; do
+      [[ -d "$skill_dir" ]] || continue
+      local skill_name="${skill_dir:t}"
+      mkdir -p "$REPO_ROOT/.claude/skills/$skill_name"
+      cp "$skill_dir/SKILL.md" "$REPO_ROOT/.claude/skills/$skill_name/"
+      override_count=$((override_count + 1))
+    done
+  fi
+
+  print -P "${G}${B}Synced:${R} $count skills from source, $override_count project overrides applied."
+}
+
+cmd_override() {
+  local name="${1:-}"
+  if [[ -z "$name" ]]; then
+    print -P "${ERR}${B}Error:${R} Skill name required. Usage: rl skills override <name>"
+    exit 1
+  fi
+
+  if [[ -z "$REPO_ROOT" ]]; then
+    print -P "${ERR}${B}Error:${R} Not inside a git repository."
+    exit 1
+  fi
+
+  # Find the skill in the source
+  local src=""
+  if [[ -d "$RL_ROOT/resources/skills/workflow/$name" ]]; then
+    src="$RL_ROOT/resources/skills/workflow/$name"
+  elif [[ -d "$RL_ROOT/resources/skills/workflow-openspec/$name" ]]; then
+    src="$RL_ROOT/resources/skills/workflow-openspec/$name"
+  else
+    print -P "${ERR}${B}Error:${R} Skill not found in rl source: $name"
+    exit 1
+  fi
+
+  local dst="$REPO_ROOT/.rl/skills/$name"
+  mkdir -p "$dst"
+  cp "$src/SKILL.md" "$dst/"
+  print -P "${G}${B}Created override:${R} .rl/skills/$name/SKILL.md"
+  print -P "${D}Edit this file to customize. It takes precedence over the source version.${R}"
 }
 
 cmd_installed() {
@@ -224,21 +314,19 @@ cmd_add_openspec() {
 
   print -P "${C}${B}Adding OpenSpec to this project...${R}\n"
 
-  # Detect package manager
-  local pm
-  pm=$(detect_pm "$REPO_ROOT")
-
-  # Install npm package if not present
-  if ! jq -e '.devDependencies["@fission-ai/openspec"] // .dependencies["@fission-ai/openspec"]' "$REPO_ROOT/package.json" &>/dev/null; then
-    print -P "  ${G}Installing:${R} @fission-ai/openspec"
-    ( cd "$REPO_ROOT" && pm_add "$pm" -D @fission-ai/openspec )
-  else
-    print -P "  ${D}skip:${R} @fission-ai/openspec (already installed)"
+  # Verify OpenSpec CLI is available (global tool)
+  if ! (( $+commands[openspec] )) && ! npx openspec --version &>/dev/null 2>&1; then
+    print -P "${ERR}${B}Error:${R} OpenSpec CLI not found."
+    print -P "${D}Install globally: npm install -g @fission-ai/openspec${R}"
+    exit 1
   fi
 
-  # Initialize OpenSpec if not already done
+  # Initialize OpenSpec in the repo if not already done
   if [[ ! -d "$REPO_ROOT/openspec" ]]; then
-    ( cd "$REPO_ROOT" && npx openspec init 2>/dev/null || true )
+    print -P "  ${G}Initializing:${R} openspec"
+    ( cd "$REPO_ROOT" && openspec init 2>/dev/null || npx openspec init 2>/dev/null || true )
+  else
+    print -P "  ${D}skip:${R} openspec/ already initialized"
   fi
 
   # Install OpenSpec skills
@@ -262,17 +350,18 @@ cmd_add_openspec() {
     print -P "  ${G}command:${R} /opsx/${${cmd_file:t}%.md}"
   done
 
-  # Update .ralphrc
-  local ralphrc="$REPO_ROOT/.ralphrc"
-  if [[ -f "$ralphrc" ]]; then
-    if grep -q "USE_OPENSPEC=false" "$ralphrc" 2>/dev/null; then
-      sed -i '' 's/USE_OPENSPEC=false/USE_OPENSPEC=true/' "$ralphrc"
-      print -P "  ${G}updated:${R} .ralphrc (USE_OPENSPEC=true)"
+  # Update config (.rl/config or .ralphrc)
+  local config_file="$REPO_ROOT/.rl/config"
+  [[ ! -f "$config_file" ]] && config_file="$REPO_ROOT/.ralphrc"
+  if [[ -f "$config_file" ]]; then
+    if grep -q "USE_OPENSPEC=false" "$config_file" 2>/dev/null; then
+      sed -i '' 's/USE_OPENSPEC=false/USE_OPENSPEC=true/' "$config_file"
+      print -P "  ${G}updated:${R} ${config_file:t} (USE_OPENSPEC=true)"
     fi
   fi
 
   print -P "\n${G}${B}OpenSpec installed!${R}"
-  print -P "${D}Run './ralph/loop.sh interview' to start using spec-driven development.${R}"
+  print -P "${D}Run 'rl loop interview' to start using spec-driven development.${R}"
 }
 
 # ---------------------------------------------------------------------------
@@ -286,16 +375,20 @@ case "$subcmd" in
   add)          cmd_add "$@" ;;
   installed)    cmd_installed ;;
   new)          cmd_new "$@" ;;
+  sync)         cmd_sync ;;
+  override)     cmd_override "$@" ;;
   add-openspec) cmd_add_openspec ;;
   -h|--help)
     print "Usage: rl skills <command>"
     print ""
     print "Commands:"
     print "  list              Show available skill templates"
-    print "  add <name>        Install a skill template into current repo"
+    print "  add <name>        Install a template to .rl/skills/ (project override)"
     print "  installed         Show skills installed in current repo"
     print "  new <name>        Create new skill in current repo"
     print "  new --global <n>  Create new reusable template in rl toolkit"
+    print "  sync              Sync skills from rl source to .claude/skills/"
+    print "  override <name>   Copy a workflow skill to .rl/skills/ for customization"
     print "  add-openspec      Install OpenSpec skills + commands + npm package"
     ;;
   *)

@@ -10,8 +10,10 @@ set -euo pipefail
 #   2 -- operational error (no PR found, gh not authenticated, API failure)
 
 SCRIPT_DIR="${0:A:h}"
-REPO_ROOT="${SCRIPT_DIR:h}"
-OUTPUT_FILE="$SCRIPT_DIR/copilot-reviews.md"
+# Support RL_WORK env var for output location, fall back to SCRIPT_DIR (legacy)
+WORK_DIR="${RL_WORK:-$SCRIPT_DIR}"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "${SCRIPT_DIR:h}")"
+OUTPUT_FILE="$WORK_DIR/copilot-reviews.md"
 
 cd "$REPO_ROOT"
 
@@ -33,6 +35,10 @@ if [[ -z "$REPO_FULL" ]]; then
   exit 2
 fi
 
+# Split owner/repo for GraphQL query
+REPO_OWNER="${REPO_FULL%%/*}"
+REPO_NAME="${REPO_FULL##*/}"
+
 # Use temp files to avoid shell variable mangling of JSON with control characters
 # (diff_hunk fields contain tabs/newlines that break echo | jq pipelines)
 TMPDIR_REVIEWS=$(mktemp -d)
@@ -40,13 +46,43 @@ trap 'rm -rf "$TMPDIR_REVIEWS"' EXIT
 COMMENTS_FILE="$TMPDIR_REVIEWS/comments.json"
 REVIEWS_FILE="$TMPDIR_REVIEWS/reviews.json"
 
+# Fetch resolved thread comment IDs via GraphQL so we can exclude them from REST results
+echo "Fetching resolved thread status via GraphQL..."
+RESOLVED_IDS_ARRAY="[]"
+RESOLVED_COMMENT_IDS=$(gh api graphql -f query='
+  query($owner: String!, $name: String!, $pr: Int!) {
+    repository(owner: $owner, name: $name) {
+      pullRequest(number: $pr) {
+        reviewThreads(first: 100) {
+          nodes {
+            isResolved
+            comments(first: 1) {
+              nodes {
+                databaseId
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+' -f owner="$REPO_OWNER" -f name="$REPO_NAME" -F pr="$PR_NUMBER" \
+  --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved) | .comments.nodes[0].databaseId' 2>/dev/null || echo "")
+
+if [[ -n "$RESOLVED_COMMENT_IDS" ]]; then
+  RESOLVED_IDS_ARRAY=$(echo "$RESOLVED_COMMENT_IDS" | jq -s '.')
+  RESOLVED_COUNT=$(echo "$RESOLVED_IDS_ARRAY" | jq 'length')
+  echo "Found $RESOLVED_COUNT resolved threads (will be excluded)."
+fi
+
 # Fetch ALL line-level review comments (not just Copilot)
-# Filter: root comments only (not replies), not resolved
+# Filter: root comments only (not replies), exclude resolved threads
 # Output as a proper JSON array to avoid JSONL parsing issues
 gh api "repos/$REPO_FULL/pulls/$PR_NUMBER/comments" \
-  --paginate \
-  --jq '[.[] | select(
-    (.in_reply_to_id == null) or (.in_reply_to_id == 0)
+  --paginate 2>/dev/null \
+  | jq --argjson resolved "$RESOLVED_IDS_ARRAY" '[.[] | select(
+    ((.in_reply_to_id == null) or (.in_reply_to_id == 0))
+    and ((.id | IN($resolved[])) | not)
   ) | {
     path: .path,
     line: (.line // .original_line // "unknown"),

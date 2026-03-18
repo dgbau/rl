@@ -15,17 +15,37 @@ case "${1:-}" in
     shift
     exec "$RL_DIR/install.sh" "$@"
     ;;
+  loop)
+    shift
+    # Resolve repo root from current directory
+    RL_REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+    export RL_REPO_ROOT
+    exec "$RL_DIR/resources/core/loop.sh" "$@"
+    ;;
   skills)
     shift
     exec "$RL_DIR/skills.sh" "$@"
+    ;;
+  migrate)
+    shift
+    exec "$RL_DIR/migrate.sh" "$@"
+    ;;
+  update)
+    shift
+    echo "Updating rl toolkit..."
+    (cd "$RL_DIR" && git pull --ff-only)
+    echo "rl updated to $(cd "$RL_DIR" && git log --oneline -1)"
     ;;
   -h|--help|"")
     print "Usage: rl <command> [args...]"
     print ""
     print "Commands:"
-    print "  create          Create a new Nx project with Ralph Loop (--help for flags)"
+    print "  create          Create a new Nx project with Ralph Loop"
     print "  install [dir]   Add Ralph Loop to an existing repository"
+    print "  loop [mode]     Run the Ralph Loop (interview, bootstrap, build, amend, review, e2e)"
     print "  skills          Manage skill templates (list, add, new)"
+    print "  migrate         Migrate a repo from ralph/ to .rl/ model"
+    print "  update          Update the rl toolkit (git pull)"
     print ""
     print "Run 'rl <command> --help' for details."
     ;;

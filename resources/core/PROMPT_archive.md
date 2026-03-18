@@ -6,12 +6,12 @@ You are an autonomous archival agent in this project.
 
 When all tickets for an epic are complete, merge the OpenSpec delta specs into the main specs and clean up. **Do NOT implement any application code.**
 
-> This mode only applies when `USE_OPENSPEC=true` in `.ralphrc`.
+> This mode only applies when `USE_OPENSPEC=true` in `.rl/config`.
 
 ## Steps
 
 1. **Read configuration:**
-   - [`.ralphrc`](../.ralphrc) -- confirm `USE_OPENSPEC=true`
+   - [`.rl/config`](../.rl/config) -- confirm `USE_OPENSPEC=true`
    - If `USE_OPENSPEC` is not true, there is nothing to archive. Report this and stop.
 
 2. **Find the completed epic and its OpenSpec change:**

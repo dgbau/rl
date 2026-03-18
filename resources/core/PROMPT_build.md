@@ -11,7 +11,7 @@ Pick the highest-priority ready ticket, implement it, write tests, run backpress
 1. **Read context files:**
    - [`AGENTS.md`](../AGENTS.md) for project structure, commands, and conventions
    - [`LESSONS.md`](../LESSONS.md) if it exists (cumulative learnings -- avoid past mistakes)
-   - [`.ralphrc`](../.ralphrc) for project configuration (backpressure command, OpenSpec, etc.)
+   - [`.rl/config`](../.rl/config) for project configuration (backpressure command, OpenSpec, etc.)
    - Recent git log: `git log --oneline -10`
 
 2. **Pick a task ticket** (skip epics -- they close when all children close):
@@ -39,7 +39,7 @@ Pick the highest-priority ready ticket, implement it, write tests, run backpress
    For each skill listed in the ticket, read [`.claude/skills/<skill-name>/SKILL.md`](../.claude/skills/) and follow its guidance.
 
 5. **Read the design/specs:**
-   - If `USE_OPENSPEC=true` in `.ralphrc`: check the epic's `external-ref` for an `openspec:<change-id>`. If it exists, read the delta specs in [`openspec/changes/<change-id>/specs/`](../openspec/changes/).
+   - If `USE_OPENSPEC=true` in `.rl/config`: check the epic's `external-ref` for an `openspec:<change-id>`. If it exists, read the delta specs in [`openspec/changes/<change-id>/specs/`](../openspec/changes/).
    - Otherwise: read [`IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md) for design context.
 
 6. **Search before implementing:**
@@ -56,7 +56,7 @@ Pick the highest-priority ready ticket, implement it, write tests, run backpress
    - Code without tests is not complete
 
 9. **Run backpressure:**
-   Run the backpressure command from `.ralphrc` (or `AGENTS.md`).
+   Run the backpressure command from `.rl/config` (or `AGENTS.md`).
    Fix ALL failures before proceeding.
 
 10. **Update tracking:**

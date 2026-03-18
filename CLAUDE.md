@@ -4,8 +4,8 @@ This is the **rl toolkit's own development repo**. It is NOT a target project th
 
 ## CRITICAL: Dogfooding vs Distribution Boundary
 
-- `resources/` contains files that get installed into OTHER repos via `rl install`
-- `ralph/`, `.ralphrc`, `CLAUDE.md`, `AGENTS.md`, `LESSONS.md`, `.tickets/`, `.claude/skills/` at the repo root are rl's OWN development loop
+- `resources/` contains files that are sourced at runtime by target repos
+- `.rl/config`, `CLAUDE.md`, `AGENTS.md`, `LESSONS.md`, `.tickets/`, `.claude/skills/` at the repo root are rl's OWN development loop
 - **Never confuse these two contexts.** Changes to distributed resources affect all users. Changes to dogfooding files affect only rl development.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed structure.
@@ -14,23 +14,24 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed structure.
 
 ### Backpressure (run before every commit)
 ```bash
-zsh -n rl create.sh install.sh skills.sh lib/common.sh
+zsh -n rl create.sh install.sh skills.sh lib/common.sh migrate.sh resources/core/loop.sh resources/core/fetch-reviews.sh resources/core/run-e2e.sh && bash -n resources/core/reply-reviews.sh
 ```
 
 ### Key Files
 | File | Purpose |
 |------|---------|
 | `rl` | CLI entry point (dispatcher) |
-| `create.sh` | Scaffold new Nx project (supports `--no-prompt` for programmatic use) |
-| `install.sh` | Add Ralph Loop to existing repo |
-| `skills.sh` | Manage skill templates |
+| `create.sh` | Scaffold new Nx project |
+| `install.sh` | Add Ralph Loop to existing repo (creates .rl/) |
+| `skills.sh` | Manage skill templates (list, add, sync, override) |
+| `migrate.sh` | Migrate repos from legacy ralph/ to .rl/ model |
 | `lib/common.sh` | Shared utilities (detection, prompts, generation) |
 
 ### Key Directories
 | Directory | Purpose |
 |-----------|---------|
-| `resources/core/` | Loop files copied to target repos |
-| `resources/skills/workflow/` | Core skills (always installed) |
+| `resources/core/` | Loop runtime (sourced at runtime, not copied) |
+| `resources/skills/workflow/` | Core skills (synced to repos on each rl loop run) |
 | `resources/skills/workflow-openspec/` | OpenSpec skills (optional) |
 | `resources/skills/templates/` | Technology templates (user-selectable) |
 | `resources/commands/` | Slash commands (OpenSpec only) |

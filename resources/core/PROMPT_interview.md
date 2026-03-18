@@ -11,9 +11,9 @@ Interview the human about what they want built, then create a proposal and a hum
 1. **Read context files:**
    - [`AGENTS.md`](../AGENTS.md) for project structure and conventions
    - [`LESSONS.md`](../LESSONS.md) if it exists (cumulative learnings)
-   - [`.ralphrc`](../.ralphrc) for project configuration (note `USE_OPENSPEC` setting)
+   - [`.rl/config`](../.rl/config) for project configuration (note `USE_OPENSPEC` setting)
    - Recent git log: `git log --oneline -10`
-   - If `USE_OPENSPEC=true` in `.ralphrc`: read [`openspec/specs/`](../openspec/specs/) if any specs exist
+   - If `USE_OPENSPEC=true` in `.rl/config`: read [`openspec/specs/`](../openspec/specs/) if any specs exist
 
 2. **Scan for missing skills:**
    - Check `package.json` dependencies, config files, and project structure for technologies in use
@@ -29,7 +29,7 @@ Interview the human about what they want built, then create a proposal and a hum
 
 4. **Create the proposal:**
 
-   **If `USE_OPENSPEC=true` in `.ralphrc`:**
+   **If `USE_OPENSPEC=true` in `.rl/config`:**
    - Choose a short kebab-case change ID (e.g., `add-dark-mode`, `fix-pdf-links`)
    - Run: `npx openspec new change <change-id>`
    - Write the artifacts in order (OpenSpec tracks completion via `npx openspec status --change <change-id>`):

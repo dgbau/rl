@@ -16,30 +16,33 @@ set -uo pipefail
 #   The command should produce JSON output or exit non-zero on failure.
 
 SCRIPT_DIR="${0:A:h}"
-REPO_ROOT="${SCRIPT_DIR:h}"
-OUTPUT_FILE="$SCRIPT_DIR/e2e-results.md"
-RAW_OUTPUT="$SCRIPT_DIR/.e2e-raw-output.txt"
+WORK_DIR="${RL_WORK:-$SCRIPT_DIR}"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "${SCRIPT_DIR:h}")"
+OUTPUT_FILE="$WORK_DIR/e2e-results.md"
+RAW_OUTPUT="$WORK_DIR/.e2e-raw-output.txt"
 
 cd "$REPO_ROOT"
 
-# Load config
-if [[ -f "$REPO_ROOT/.ralphrc" ]]; then
+# Load config (.rl/config > .ralphrc)
+if [[ -f "$REPO_ROOT/.rl/config" ]]; then
+  source "$REPO_ROOT/.rl/config"
+elif [[ -f "$REPO_ROOT/.ralphrc" ]]; then
   source "$REPO_ROOT/.ralphrc"
 fi
 
 E2E_COMMAND="${E2E_CMD:-}"
 
 if [[ -z "$E2E_COMMAND" ]]; then
-  echo "ERROR: No E2E_CMD configured in .ralphrc"
+  echo "ERROR: No E2E_CMD configured in .rl/config"
   echo "Set E2E_CMD to your E2E test command, e.g.:"
   echo "  E2E_CMD=\"npx cypress run --reporter json\""
   echo "  E2E_CMD=\"npx playwright test --reporter=json\""
   {
     echo "# E2E Test Results"
     echo ""
-    echo "**ERROR**: No E2E_CMD configured in .ralphrc"
+    echo "**ERROR**: No E2E_CMD configured in .rl/config"
     echo ""
-    echo "Set \`E2E_CMD\` in \`.ralphrc\` to your E2E test command."
+    echo "Set \`E2E_CMD\` in \`.rl/config\` to your E2E test command."
   } > "$OUTPUT_FILE"
   exit 0  # Signal loop to continue (there's an issue to fix)
 fi

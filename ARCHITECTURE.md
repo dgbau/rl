@@ -2,111 +2,120 @@
 
 ## How It Works
 
-- `rl` is a CLI toolkit that installs the Ralph Loop methodology into git repos
+- `rl` is a CLI toolkit that orchestrates the **Ralph Loop** — an AI development methodology using Claude Code
 - The Ralph Loop spawns fresh Claude Code instances per task, with state persisting via git
 - Skills (markdown files) teach each instance project patterns; prompts guide each mode
-- Three commands: `rl create` (scaffold new Nx project), `rl install` (add to existing repo), `rl skills` (manage templates)
+- Core commands: `rl create`, `rl install`, `rl loop`, `rl skills`, `rl migrate`, `rl update`
 
-## IMPORTANT: Dogfooding vs Distribution Boundary
+## Hybrid Model: What Lives Where
 
-rl uses its own ralph loop for self-development. These two concerns are strictly separated:
-
-### Distribution (what gets installed into OTHER repos)
+### In the rl toolkit (source of truth)
 
 ```
-resources/core/           → Copied to repo's ralph/ directory (the loop itself)
+resources/core/           → Loop runtime (NOT copied to repos — sourced at runtime)
   loop.sh                 → Main loop orchestrator
-  PROMPT_*.md             → Mode-specific prompts (interview, bootstrap, build, review, archive, e2e)
-  fetch-reviews.sh        → PR review fetcher
+  PROMPT_*.md             → Mode-specific prompts (interview, bootstrap, build, amend, review, archive, e2e)
+  fetch-reviews.sh        → PR review fetcher (GraphQL resolved-thread filtering)
+  reply-reviews.sh        → PR review reply + thread resolution
   run-e2e.sh              → E2E test runner
-  README.md               → Ralph Loop documentation
   CLAUDE.md.template      → Template for generated CLAUDE.md
-  ralphrc.template        → Template for .ralphrc
-resources/skills/         → Copied to repo's .claude/skills/ (agent knowledge)
-  workflow/               → Always installed (core operational skills)
-    ralph-workflow/       → Loop orchestration rules
-    backpressure/         → Quality gate (lint/test/build)
-    ticket-management/    → tk CLI usage
-    self-update/          → rl update procedure
-    github-pr-review/     → PR review handling
-    code-quality/         → Universal code best practices
-    security/             → OWASP Top 10 as rules
-    ui-ux/                → Accessibility, design tokens, responsive
-    api-design/           → REST/GraphQL conventions
-    testing-principles/   → Test pyramid, AAA, mocking discipline
-    observability/        → Logging, metrics, tracing
-    data-integration/     → External API consumption patterns
-    react-patterns/       → React design principles and best practices
-    nextjs-patterns/      → Next.js App Router patterns and conventions
-    nx/                   → Nx monorepo tooling and features
-  workflow-openspec/      → Installed when USE_OPENSPEC=true
-  templates/              → User-selected technology templates with [FILL] markers
+  ralphrc.template        → Template for config (legacy)
+resources/skills/         → Skill source of truth (synced to repos at runtime)
+  workflow/               → Always synced (core operational skills)
+  workflow-openspec/      → Synced when USE_OPENSPEC=true
+  templates/              → User-selected technology templates
 resources/commands/       → Slash commands for Claude Code (OpenSpec only)
-resources/SKILLS_INDEX.md → Skill catalog with tool recommendations
-lib/common.sh             → Shared shell functions (detection, prompts, generation)
+lib/common.sh             → Shared shell functions
 ```
 
-### Dogfooding (rl's OWN development — NEVER distributed)
+### In target repos
 
 ```
-ralph/                → rl's own ralph loop instance (NOT resources/core/)
-.ralphrc              → rl's own config (NOT resources/core/ralphrc.template)
-CLAUDE.md             → rl's own root doc (NOT resources/core/CLAUDE.md.template)
-AGENTS.md             → rl's own conventions
-LESSONS.md            → rl's own learnings
-.tickets/             → rl's own task tracking
-.claude/skills/       → rl's own skills (includes rl-development skill)
-ARCHITECTURE.md       → This file — rl's own architecture doc
+.rl/                      → rl configuration directory
+  config                  → Project-specific settings (replaces .ralphrc)
+  skills/                 → Project-specific skill overrides (highest precedence)
+  copilot-reviews.md      → Working file (gitignored)
+  review-manifest.json    → Working file (gitignored)
+  e2e-results.md          → Working file (gitignored)
+.claude/skills/           → Effective skills (synced from rl + overrides on each rl loop run)
+CLAUDE.md                 → Generated project config for Claude Code
+AGENTS.md                 → Generated operational guide
+LESSONS.md                → Cumulative learnings (work artifact)
+IMPLEMENTATION_PLAN.md    → High-level vision from interview (work artifact)
+.tickets/                 → Task queue via tk (work artifact)
+openspec/                 → Specs and changes (if USE_OPENSPEC=true, work artifact)
 ```
 
-**Rule: `install.sh` reads from `resources/`, NEVER from the repo root.**
-**Rule: Dogfooding files are for rl's own development and never copied to target repos.**
+## Skill Sync System
+
+Every `rl loop` invocation syncs skills before launching Claude:
+
+1. **Layer 1**: Copy `resources/skills/workflow/*` → `.claude/skills/` (always, overwrite)
+2. **Layer 2**: Copy `resources/skills/workflow-openspec/*` (if USE_OPENSPEC=true)
+3. **Layer 3**: Copy `.rl/skills/*` over top (project overrides win)
+
+This ensures:
+- Skills are always current with the rl toolkit version
+- Project-specific customizations are preserved in `.rl/skills/`
+- No manual sync needed — it happens automatically
 
 ## CLI Commands
 
 | Command | Script | Purpose |
 |---------|--------|---------|
-| `rl create` | `create.sh` | Scaffold new Nx project with Ralph Loop pre-installed |
-| `rl install` | `install.sh` | Add Ralph Loop to any existing git repo |
-| `rl skills` | `skills.sh` | Manage skill templates (list/add/installed/new/add-openspec) |
+| `rl create` | `create.sh` | Scaffold new Nx project with rl configured |
+| `rl install` | `install.sh` | Add rl to any existing git repo (creates .rl/) |
+| `rl loop [mode]` | `resources/core/loop.sh` | Run the Ralph Loop (interview, bootstrap, build, amend, review, archive, e2e) |
+| `rl skills` | `skills.sh` | Manage skill templates (list, add, installed, sync, override, new) |
+| `rl migrate` | `migrate.sh` | Migrate from legacy ralph/ model to .rl/ model |
+| `rl update` | (inline) | Update rl toolkit (git pull) |
+
+## Ralph Loop Modes
+
+| Mode | Command | Purpose | Interactive? |
+|------|---------|---------|--------------|
+| interview | `rl loop interview` | Claude interviews user, creates proposal | Always |
+| bootstrap | `rl loop bootstrap` | Create tk tickets from proposal | Either |
+| build | `rl loop` | Implement one ticket, test, commit | Either |
+| amend | `rl loop amend` | Diagnose spec gaps, amend artifacts, create tickets | Always |
+| archive | `rl loop archive` | Merge completed OpenSpec change into specs | Either |
+| review | `rl loop review` | Address PR review feedback with manifest-based replies | Either |
+| e2e | `rl loop e2e` | Run E2E tests, fix failures | Either |
 
 ## Skill Taxonomy
 
-Precedence: project > stack > language > universal > workflow
+Precedence: project override > template > stack > language > universal > workflow
 
 | Layer | Type | Purpose | Examples |
 |-------|------|---------|----------|
 | 0 | Workflow | HOW to operate | ralph-workflow, ticket-management, backpressure |
 | 1 | Universal | WHAT principles apply everywhere | code-quality, security, ui-ux, api-design |
 | 2 | Language | Language-specific conventions | go, rust, python, jvm, c-cpp |
-| 3 | Stack | Library combination patterns | stack-nextjs-payload, stack-t3, stack-gotth |
-| 4 | Technology | Individual tech with [FILL] markers | nextjs, react, tailwind, stripe, canvas |
-| 5 | Project | Per-project customizations | Filled-in templates, custom skills |
+| 3 | Stack | Library combination patterns | stack-nextjs-payload, stack-t3 |
+| 4 | Technology | Individual tech with [FILL] markers | nextjs, react, tailwind, stripe |
+| 5 | Project | Per-project customizations in .rl/skills/ | Filled-in templates, custom skills |
 
 ## Config Flow
 
 ```
-.ralphrc (per-repo) → loop.sh sources it → spawns Claude with env → Claude reads skills
+.rl/config (per-repo) → loop.sh sources it → syncs skills → spawns Claude → Claude reads .claude/skills/
 ```
 
-Key `.ralphrc` variables: `PROJECT_NAME`, `BASE_BRANCH`, `BACKPRESSURE_CMD`, `E2E_CMD`, `USE_OPENSPEC`, `USES_TAILWIND`, `USES_TYPESCRIPT_STRICT`
+Environment variable overrides: `RL_*` or `RALPH_*` vars take precedence over config file values.
+
+Key config variables: `PROJECT_NAME`, `BASE_BRANCH`, `BACKPRESSURE_CMD`, `E2E_CMD`, `USE_OPENSPEC`, `BACKPRESSURE_TIMEOUT`, `E2E_TIMEOUT`, `CLAUDE_MODEL`, `MAX_ITERATIONS`, `REVIEW_WAIT`
 
 ## Detection & Generation Pipeline
 
 1. `detect_project()` in `lib/common.sh` scans the repo for signals (lockfiles, config files, app directories)
 2. Outputs: `PROJECT_NAME`, `PM`, `BASE_BRANCH`, `HAS_NX`, `APPS`, `LANGUAGES`, `HAS_OPENSPEC`, `USES_TAILWIND`, `USES_TS_STRICT`
-3. `generate_ralphrc()` creates `.ralphrc` from detected context
+3. `generate_rl_config()` creates `.rl/config` from detected context
 4. `generate_claude_md()` fills `CLAUDE.md.template` with variables and conditional sections
 5. `generate_agents_md()` creates `AGENTS.md` with build commands and conventions
 
-## Future Improvements
+## Backward Compatibility
 
-`create.sh` currently creates Nx monorepos exclusively. Non-JS/TS apps (Go, Rust, Python, JVM, C/C++) are supported as services within Nx monorepos under `apps/`, with `project.json` targets wrapping their native build tools.
-
-**Future:** When a technology stack cannot reasonably live inside an Nx monorepo (e.g., a pure Rust embedded system, a standalone Go CLI tool, a C project with CMake), `create.sh` could be extended with alternative scaffolding modes:
-- `rl create --preset=go` → `go mod init` + ralph loop
-- `rl create --preset=rust` → `cargo init` + ralph loop
-- `rl create --preset=python` → `uv init` + ralph loop
-- `rl create --preset=cmake` → CMake scaffold + ralph loop
-
-Each would need its own backpressure defaults, project detection, and CLAUDE.md template. The `install.sh` and skill system already support these languages — only the scaffolding is missing.
+Repos with the legacy `ralph/` + `.ralphrc` model still work:
+- `loop.sh` checks `.rl/config` first, falls back to `.ralphrc`
+- `rl migrate` converts legacy repos to the new model
+- Deprecation warnings guide users to migrate

@@ -12,12 +12,12 @@ Read the proposal, analyze the codebase, then create an epic ticket and right-si
    - [`AGENTS.md`](../AGENTS.md) for project structure and conventions
    - [`IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md) for the high-level vision
    - [`LESSONS.md`](../LESSONS.md) if it exists (avoid repeating past mistakes)
-   - [`.ralphrc`](../.ralphrc) for project configuration (note `USE_OPENSPEC` setting)
+   - [`.rl/config`](../.rl/config) for project configuration (note `USE_OPENSPEC` setting)
    - Recent git log: `git log --oneline -10`
 
 2. **Read the proposal:**
 
-   **If `USE_OPENSPEC=true` in `.ralphrc`:**
+   **If `USE_OPENSPEC=true` in `.rl/config`:**
    - Run `npx openspec list` to find the active change
    - Run `npx openspec status --change <change-id>` to see artifact completion
    - Read the change files directly in `openspec/changes/<change-id>/`:

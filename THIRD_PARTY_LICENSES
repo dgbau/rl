@@ -1,0 +1,53 @@
+# Third-Party Licenses
+
+The rl toolkit depends on external CLI tools at runtime. These are not bundled
+with rl but must be installed separately. Their licenses are documented here.
+
+## Required Dependencies
+
+### git
+- License: GPL-2.0
+- Copyright: Linus Torvalds, Junio C Hamano, and contributors
+- Source: https://github.com/git/git
+
+### gh (GitHub CLI)
+- License: MIT
+- Copyright: GitHub, Inc.
+- Source: https://github.com/cli/cli
+
+### jq
+- License: MIT
+- Copyright: Stephen Dolan
+- Source: https://github.com/jqlang/jq
+
+### Node.js / npx
+- License: MIT
+- Copyright: OpenJS Foundation and Node.js contributors
+- Source: https://github.com/nodejs/node
+
+### claude (Claude Code CLI)
+- License: Proprietary (Anthropic)
+- Copyright: Anthropic, PBC
+- Source: https://www.npmjs.com/package/@anthropic-ai/claude-code
+
+### tk (ticket CLI)
+- License: MIT
+- Copyright: wedow
+- Source: https://github.com/wedow/ticket
+
+### zsh
+- License: MIT-like (ZSH License)
+- Copyright: Paul Falstad, zsh contributors
+- Source: https://www.zsh.org/
+
+## Optional Dependencies
+
+### @fission-ai/openspec
+- License: MIT
+- Copyright: Fission AI
+- Source: https://github.com/fission-ai/openspec
+
+### timeout / gtimeout (GNU coreutils)
+- License: GPL-3.0
+- Copyright: Free Software Foundation
+- Source: https://www.gnu.org/software/coreutils/

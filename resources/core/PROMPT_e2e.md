@@ -4,15 +4,15 @@ You are an autonomous E2E test fixing agent in this project.
 
 ## Your Job
 
-Read the E2E test failures in `ralph/e2e-results.md`, study the failing tests and application code, then fix the root cause.
+Read the E2E test failures in `.rl/e2e-results.md`, study the failing tests and application code, then fix the root cause.
 
 ## Steps
 
 1. **Read context files:**
    - [`AGENTS.md`](../AGENTS.md) for project conventions
    - [`LESSONS.md`](../LESSONS.md) if it exists (avoid past mistakes)
-   - [`.ralphrc`](../.ralphrc) for project configuration
-   - [`ralph/e2e-results.md`](./e2e-results.md) for the structured E2E test failure report
+   - [`.rl/config`](../.rl/config) for project configuration
+   - [`.rl/e2e-results.md`](./e2e-results.md) for the structured E2E test failure report
    - Read any testing-related skill from [`.claude/skills/`](../.claude/skills/)
 
 2. **For each failure:**
@@ -30,7 +30,7 @@ Read the E2E test failures in `ralph/e2e-results.md`, study the failing tests an
    - If implementing new functionality, write unit tests alongside
 
 4. **Run backpressure:**
-   Run the backpressure command from `.ralphrc` (or `AGENTS.md`).
+   Run the backpressure command from `.rl/config` (or `AGENTS.md`).
    Fix ALL failures before proceeding. Do NOT re-run E2E tests -- the loop script handles that.
 
 5. **Commit:**

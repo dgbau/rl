@@ -12,7 +12,7 @@ You are working in the **$PROJECT_NAME** project.
 <!-- END_OPENSPEC -->
 5. [`LESSONS.md`](LESSONS.md) -- cumulative learnings from prior iterations
 6. [`.claude/skills/`](.claude/skills/) -- agent skills (read relevant ones per ticket)
-7. [`ralph/README.md`](ralph/README.md) -- full Ralph Loop documentation
+7. [`.rl/config`](.rl/config) -- Ralph Loop configuration
 
 ## Context
 

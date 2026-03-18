@@ -4,7 +4,7 @@ You are an autonomous review agent in this project.
 
 ## Your Job
 
-Read PR review comments (from Copilot and human reviewers), verify their accuracy, fix valid issues, create or amend tickets for substantial feedback, and update all relevant tracking files.
+Read PR review comments (from Copilot and human reviewers), **skeptically verify** each one against the actual codebase, fix valid issues, create or amend tickets for substantial feedback, and produce a structured manifest for replying to and resolving each comment thread.
 
 ## Steps
 
@@ -12,18 +12,27 @@ Read PR review comments (from Copilot and human reviewers), verify their accurac
 
 1. Read [`AGENTS.md`](../AGENTS.md) for project conventions
 2. Read [`LESSONS.md`](../LESSONS.md) for cumulative learnings
-3. Read [`.ralphrc`](../.ralphrc) for project configuration
-4. Read [`.claude/skills/github-pr-review/SKILL.md`](../.claude/skills/github-pr-review/SKILL.md) for the full review workflow
-5. Read [`ralph/copilot-reviews.md`](./copilot-reviews.md) for the review comments
-6. Identify active tickets:
+3. Read [`.claude/skills/github-pr-review/SKILL.md`](../.claude/skills/github-pr-review/SKILL.md) for the full review workflow
+4. Read [`.rl/copilot-reviews.md`](./copilot-reviews.md) for the review comments
+5. Identify active tickets:
    ```bash
    tk ls --status=in_progress
    tk ls --status=open
    ```
 
-### Phase 2: Triage
+### Phase 2: Triage + Verify
 
-For each review comment, classify it into one of these categories:
+For each review comment, **independently verify it** before classifying:
+
+#### Skeptical Verification Protocol
+
+1. **Read the actual current file** — NOT just the diff hunk. Diff hunks can be stale or misleading.
+2. **Assess the claim** — Is the reviewer correct about the behavior? Test it mentally or by reading surrounding code.
+3. **Check if already fixed** — A subsequent commit may have already addressed the issue.
+4. **Evaluate the suggestion** — Even if the reviewer identified a real issue, their proposed fix may be wrong.
+5. **Be especially skeptical of Copilot** — Copilot often flags style preferences or suggests changes that would break code. Verify every Copilot suggestion thoroughly.
+
+#### Classification
 
 | Category | Description | Action |
 |----------|-------------|--------|
@@ -35,7 +44,8 @@ For each review comment, classify it into one of these categories:
 **Triage rules:**
 - Human reviewer comments get higher priority than Copilot comments
 - If a comment questions the fundamental approach, treat as design concern (not just a code fix)
-- Verify every comment against the actual codebase before acting -- reviewers sometimes misread diffs
+- If a comment reveals behavior the specs didn't account for, treat as spec gap
+- If Copilot identifies a real issue but suggests the wrong fix, apply your own correct fix (not Copilot's suggestion)
 
 ### Phase 3: Act
 
@@ -58,7 +68,7 @@ For each review comment, classify it into one of these categories:
      --acceptance "<what done looks like>"
    ```
 
-**For spec gaps (when `USE_OPENSPEC=true`):**
+**For spec gaps (when OpenSpec is in use):**
 1. If an active change exists in `openspec/changes/<change-id>/`:
    - Update the relevant delta spec
 2. If already archived, note the gap in [`LESSONS.md`](../LESSONS.md)
@@ -69,68 +79,66 @@ For each review comment, classify it into one of these categories:
 
 ### Phase 4: Verify
 
-Run backpressure (the command from `.ralphrc` or `AGENTS.md`).
+Run backpressure (the command from config or `AGENTS.md`).
 Fix ALL failures before proceeding.
 
-### Phase 5: Track
+### Phase 5: Write Review Manifest
+
+After all triage and fixes are complete, write `.rl/review-manifest.json` — a JSON array with one entry per comment. Each comment in `copilot-reviews.md` has a `<!-- comment_id: NNN node_id: NODE_ID -->` annotation in its heading.
+
+```json
+[
+  {
+    "comment_id": 12345,
+    "category": "code-fix",
+    "reply": "[Ralph] Fixed. The grep pattern was fragile — changed to use exact match on ticket status field to avoid false positives. Verified with backpressure passing.",
+    "resolve": true
+  },
+  {
+    "comment_id": 12346,
+    "category": "invalid",
+    "reply": "[Ralph] Disagree. The current `set -euo pipefail` already handles this case — if the command fails, the script exits immediately. Adding an explicit check here is redundant and would mask the actual error message. See line 42 where the error is caught.",
+    "resolve": true
+  }
+]
+```
+
+#### Reply Format by Category
+
+**Code fix** (you agree and fixed it):
+```
+[Ralph] Fixed. <what was wrong and what you changed>. Verified with backpressure passing.
+```
+
+**Code fix** (real issue, but different fix than suggested):
+```
+[Ralph] Fixed differently. <the reviewer's concern was valid, but their suggested fix would have caused X>. Instead, <what you actually did>. Verified with backpressure passing.
+```
+
+**Design concern**:
+```
+[Ralph] Noted as design concern. <action taken — ticket created/amended with ID, or explanation of approach>.
+```
+
+**Spec gap**:
+```
+[Ralph] Spec gap identified. <what was updated — delta spec path or LESSONS.md entry>.
+```
+
+**Invalid** (disagreement — MUST include specific reasoning):
+```
+[Ralph] Disagree. <specific reasoning explaining why the suggestion is incorrect or does not apply, with references to actual code lines/behavior>.
+```
+
+**IMPORTANT**: Every reply MUST start with `[Ralph]`. Every entry MUST have `"resolve": true`. The manifest is consumed by `reply-reviews.sh (managed by rl)` to post replies and resolve threads.
+
+### Phase 6: Track
 
 1. For each comment addressed, summarize what was done
 2. If a review revealed a non-obvious lesson, append it to [`LESSONS.md`](../LESSONS.md)
 3. If new tickets were created, list them
 
-### Phase 6: Commit
-
-Use conventional commits:
-```bash
-git add -A
-git commit -m "fix(review): address PR feedback
-
-- <summary of code fixes>
-- <new tickets created, if any>"
-git push
-```
-
-### Phase 7: Reply to and Resolve Addressed Comments
-
-After committing and pushing, reply to each PR comment you addressed and resolve its thread.
-
-1. **Extract metadata** from `ralph/copilot-reviews.md`:
-   - Repository: from `Repository:` line (e.g. `owner/repo`)
-   - PR number: from the `# PR Review Comments (PR #N)` header
-   - Comment IDs and node IDs: from `<!-- comment_id: ID node_id: NODE_ID -->` annotations
-2. **Get the commit SHA** of the fix you just pushed:
-   ```bash
-   COMMIT_SHA=$(git rev-parse --short HEAD)
-   ```
-3. **For each addressed comment**, reply and resolve:
-   ```bash
-   # Step 1: Reply to the comment
-   gh api "repos/{owner}/{repo}/pulls/{pr}/comments/{comment_id}/replies" \
-     -f body="Fixed in ${COMMIT_SHA} — <brief description of what was done>"
-
-   # Step 2: Get the thread ID from the comment node_id
-   THREAD_ID=$(gh api graphql -f query='
-     query {
-       node(id: "{node_id}") {
-         ... on PullRequestReviewComment {
-           pullRequestReviewThread { id }
-         }
-       }
-     }' --jq '.data.node.pullRequestReviewThread.id')
-
-   # Step 3: Resolve the thread
-   gh api graphql -f query="
-     mutation {
-       resolveReviewThread(input: {threadId: \"$THREAD_ID\"}) {
-         thread { isResolved }
-       }
-     }"
-   ```
-   - For **code fixes**: reply with what was fixed and the commit
-   - For **invalid comments**: reply explaining why the comment doesn't apply
-   - For **design concerns** turned into tickets: reply with the ticket reference
-   - Keep replies concise (1-2 sentences max)
-4. **Skip** comments that weren't actionable or were already resolved
+**IMPORTANT:** Do NOT commit or push. The loop script handles commit and push after your session ends. Just make the code changes, write the manifest, and exit.
 
 ## Review-to-Skill Pipeline
 
@@ -142,18 +150,14 @@ When code review feedback reveals a recurring pattern, antipattern, or conventio
 - A new best practice emerges from review discussion
 - A gotcha or pitfall is discovered that future agents should know about
 
-**How to do it:**
-1. Identify which skill the knowledge belongs in (check `.claude/skills/` for existing skills)
-2. If an existing skill covers the topic, add a bullet or subsection to it
-3. If no skill fits, create a new one in `.claude/skills/<name>/SKILL.md`
-4. Commit the skill update alongside the review fixes
-
 ## Rules
 
 - **Human comments take priority** over Copilot comments
-- **Verify before acting** -- always check the current code, not just the diff hunk
-- Do NOT blindly apply every suggestion -- verify it's correct first
+- **Be skeptical** — especially of Copilot suggestions. Verify against actual code, not just diff hunks
+- Do NOT blindly apply every suggestion — verify it's correct first
 - If a suggestion would break existing functionality, do NOT apply it
+- If Copilot suggests a style change with no functional impact, triage as invalid and explain why
 - If a comment requires work beyond the current branch scope, create a ticket but don't implement it now
-- Always run backpressure before committing
+- Always run backpressure before finishing
+- Always write `.rl/review-manifest.json` before finishing
 - ONE review iteration addresses ALL comments if possible

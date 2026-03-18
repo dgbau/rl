@@ -2,9 +2,10 @@
 .DS_Store
 
 # Ralph Loop working files (dogfooding)
-ralph/copilot-reviews.md
-ralph/e2e-results.md
-ralph/.e2e-*
+.rl/copilot-reviews.md
+.rl/review-manifest.json
+.rl/e2e-results.md
+.rl/.e2e-*
 
 # Editor
 *.swp

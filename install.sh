@@ -81,15 +81,18 @@ if ! git -C "$TARGET_DIR" rev-parse --is-inside-work-tree &>/dev/null; then
   exit 1
 fi
 
-# Check if ralph is already installed
-if [[ -f "$TARGET_DIR/ralph/loop.sh" ]]; then
-  print -P "${Y}Warning:${R} Ralph loop already exists at $TARGET_DIR/ralph/"
+# Check if already installed (new or legacy model)
+if [[ -f "$TARGET_DIR/.rl/config" ]]; then
+  print -P "${Y}Warning:${R} rl is already configured at $TARGET_DIR/.rl/config"
   if [[ "$NO_PROMPT" != "true" ]]; then
-    if ! prompt_yn "Overwrite existing ralph files?"; then
+    if ! prompt_yn "Overwrite existing configuration?"; then
       print "Aborted."
       exit 0
     fi
   fi
+elif [[ -f "$TARGET_DIR/ralph/loop.sh" ]]; then
+  print -P "${Y}Warning:${R} Legacy ralph/ installation found at $TARGET_DIR/ralph/"
+  print -P "${D}This install will use the new .rl/ model. Run 'rl migrate' to clean up ralph/.${R}"
 fi
 
 # ---------------------------------------------------------------------------
@@ -209,13 +212,22 @@ fi
 USE_OPENSPEC="${USE_OPENSPEC:-false}"
 
 # ---------------------------------------------------------------------------
-# Install OpenSpec npm package (if opted in and not already installed)
+# Verify OpenSpec is available (global tool, not a repo dependency)
 # ---------------------------------------------------------------------------
-if [[ "$USE_OPENSPEC" == "true" && "$HAS_OPENSPEC" != "true" ]]; then
-  print ""
-  print -P "${D}Installing OpenSpec...${R}"
-  (cd "$TARGET_DIR" && pm_add "$PM" -D @fission-ai/openspec)
-  (cd "$TARGET_DIR" && npx openspec init 2>/dev/null || true)
+if [[ "$USE_OPENSPEC" == "true" ]]; then
+  if (( $+commands[openspec] )) || (( $+commands[npx] )) && npx openspec --version &>/dev/null; then
+    # Initialize OpenSpec in the repo if not already done
+    if [[ ! -d "$TARGET_DIR/openspec" ]]; then
+      print ""
+      print -P "${D}Initializing OpenSpec...${R}"
+      (cd "$TARGET_DIR" && openspec init 2>/dev/null || npx openspec init 2>/dev/null || true)
+    fi
+  else
+    print ""
+    print -P "${Y}Warning:${R} OpenSpec CLI not found."
+    print -P "${D}Install globally: npm install -g @fission-ai/openspec${R}"
+    print -P "${D}Continuing with USE_OPENSPEC=true in config — install OpenSpec before running rl loop.${R}"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -225,7 +237,7 @@ BACKPRESSURE_CMD=""
 if [[ "$HAS_NX" == "true" ]]; then
   BACKPRESSURE_CMD="npx nx affected -t lint test build"
 elif [[ -f "$TARGET_DIR/package.json" ]]; then
-  # Check for common scripts
+  # Check for common Node.js scripts
   local has_lint has_test has_build
   has_lint=$(jq -r '.scripts.lint // empty' "$TARGET_DIR/package.json" 2>/dev/null || true)
   has_test=$(jq -r '.scripts.test // empty' "$TARGET_DIR/package.json" 2>/dev/null || true)
@@ -240,14 +252,77 @@ elif [[ -f "$TARGET_DIR/package.json" ]]; then
     BACKPRESSURE_CMD="${(j: && :)parts}"
   fi
 fi
-BACKPRESSURE_CMD="${BACKPRESSURE_CMD:-echo 'No backpressure command configured -- set BACKPRESSURE_CMD in .ralphrc'}"
+
+# Non-JS language detection: build backpressure from detected languages
+if [[ -z "$BACKPRESSURE_CMD" ]]; then
+  local -a bp_parts=()
+
+  for lang in ${=LANGUAGES}; do
+    case "$lang" in
+      go)
+        bp_parts+=("go vet ./...")
+        bp_parts+=("go test ./...")
+        ;;
+      rust)
+        bp_parts+=("cargo clippy -- -D warnings")
+        bp_parts+=("cargo test")
+        ;;
+      python)
+        if [[ -f "$TARGET_DIR/pyproject.toml" ]]; then
+          # Detect test framework
+          local pyproject_content=$(<"$TARGET_DIR/pyproject.toml")
+          if [[ "$pyproject_content" == *"pytest"* ]]; then
+            bp_parts+=("pytest")
+          else
+            bp_parts+=("python -m unittest discover")
+          fi
+          # Detect linter
+          if [[ "$pyproject_content" == *"ruff"* ]]; then
+            bp_parts+=("ruff check .")
+          elif [[ "$pyproject_content" == *"flake8"* ]]; then
+            bp_parts+=("flake8 .")
+          fi
+          # Detect type checker
+          if [[ "$pyproject_content" == *"mypy"* ]]; then
+            bp_parts+=("mypy .")
+          fi
+        else
+          bp_parts+=("python -m unittest discover")
+        fi
+        ;;
+      jvm)
+        if [[ -f "$TARGET_DIR/build.gradle" || -f "$TARGET_DIR/build.gradle.kts" ]]; then
+          bp_parts+=("./gradlew check")
+        elif [[ -f "$TARGET_DIR/pom.xml" ]]; then
+          bp_parts+=("mvn verify")
+        elif [[ -f "$TARGET_DIR/build.sbt" ]]; then
+          bp_parts+=("sbt test")
+        fi
+        ;;
+      c-cpp)
+        if [[ -f "$TARGET_DIR/CMakeLists.txt" ]]; then
+          bp_parts+=("cmake --build build && ctest --test-dir build")
+        elif [[ -f "$TARGET_DIR/meson.build" ]]; then
+          bp_parts+=("meson test -C builddir")
+        fi
+        ;;
+    esac
+  done
+
+  if (( ${#bp_parts} )); then
+    BACKPRESSURE_CMD="${(j: && :)bp_parts}"
+  fi
+fi
+
+BACKPRESSURE_CMD="${BACKPRESSURE_CMD:-echo 'No backpressure command configured -- set BACKPRESSURE_CMD in .rl/config'}"
 
 # ---------------------------------------------------------------------------
-# Generate .ralphrc
+# Generate .rl/config
 # ---------------------------------------------------------------------------
 print ""
-print -P "${D}Generating .ralphrc...${R}"
-generate_ralphrc \
+print -P "${D}Creating .rl/ directory and config...${R}"
+mkdir -p "$TARGET_DIR/.rl/skills"
+generate_rl_config \
   "$PROJECT_NAME" \
   "$BASE_BRANCH" \
   "$USE_OPENSPEC" \
@@ -258,28 +333,7 @@ generate_ralphrc \
   "opus" \
   "25" \
   "90" \
-  > "$TARGET_DIR/.ralphrc"
-
-# ---------------------------------------------------------------------------
-# Copy ralph loop files
-# ---------------------------------------------------------------------------
-print -P "${D}Installing ralph loop files...${R}"
-mkdir -p "$TARGET_DIR/ralph"
-
-cp "$RL_ROOT/resources/core/loop.sh" "$TARGET_DIR/ralph/loop.sh"
-cp "$RL_ROOT/resources/core/PROMPT_interview.md" "$TARGET_DIR/ralph/"
-cp "$RL_ROOT/resources/core/PROMPT_bootstrap.md" "$TARGET_DIR/ralph/"
-cp "$RL_ROOT/resources/core/PROMPT_build.md" "$TARGET_DIR/ralph/"
-cp "$RL_ROOT/resources/core/PROMPT_archive.md" "$TARGET_DIR/ralph/"
-cp "$RL_ROOT/resources/core/PROMPT_review.md" "$TARGET_DIR/ralph/"
-cp "$RL_ROOT/resources/core/PROMPT_e2e.md" "$TARGET_DIR/ralph/"
-cp "$RL_ROOT/resources/core/fetch-reviews.sh" "$TARGET_DIR/ralph/"
-cp "$RL_ROOT/resources/core/run-e2e.sh" "$TARGET_DIR/ralph/"
-cp "$RL_ROOT/resources/core/README.md" "$TARGET_DIR/ralph/"
-
-chmod +x "$TARGET_DIR/ralph/loop.sh"
-chmod +x "$TARGET_DIR/ralph/fetch-reviews.sh"
-chmod +x "$TARGET_DIR/ralph/run-e2e.sh"
+  > "$TARGET_DIR/.rl/config"
 
 # ---------------------------------------------------------------------------
 # Generate CLAUDE.md
@@ -376,19 +430,21 @@ fi
 
 # .gitignore additions
 if [[ -f "$TARGET_DIR/.gitignore" ]]; then
-  if ! grep -q "ralph/copilot-reviews.md" "$TARGET_DIR/.gitignore" 2>/dev/null; then
+  if ! grep -q ".rl/copilot-reviews.md" "$TARGET_DIR/.gitignore" 2>/dev/null; then
     print "" >> "$TARGET_DIR/.gitignore"
     print "# Ralph Loop working files" >> "$TARGET_DIR/.gitignore"
-    print "ralph/copilot-reviews.md" >> "$TARGET_DIR/.gitignore"
-    print "ralph/e2e-results.md" >> "$TARGET_DIR/.gitignore"
-    print "ralph/.e2e-*" >> "$TARGET_DIR/.gitignore"
+    print ".rl/copilot-reviews.md" >> "$TARGET_DIR/.gitignore"
+    print ".rl/review-manifest.json" >> "$TARGET_DIR/.gitignore"
+    print ".rl/e2e-results.md" >> "$TARGET_DIR/.gitignore"
+    print ".rl/.e2e-*" >> "$TARGET_DIR/.gitignore"
   fi
 else
   cat > "$TARGET_DIR/.gitignore" << 'EOF'
 # Ralph Loop working files
-ralph/copilot-reviews.md
-ralph/e2e-results.md
-ralph/.e2e-*
+.rl/copilot-reviews.md
+.rl/review-manifest.json
+.rl/e2e-results.md
+.rl/.e2e-*
 EOF
 fi
 
@@ -398,12 +454,11 @@ fi
 print ""
 print -P "${G}${B}Ralph Loop installed!${R}"
 print ""
-print -P "  ${D}Ralph loop:${R}    ralph/loop.sh"
-print -P "  ${D}Configuration:${R} .ralphrc"
+print -P "  ${D}Configuration:${R} .rl/config"
 print -P "  ${D}Skills:${R}        .claude/skills/ ($(ls -d "$TARGET_DIR/.claude/skills"/*/ 2>/dev/null | wc -l | tr -d ' ') installed)"
 print -P "  ${D}OpenSpec:${R}      $USE_OPENSPEC"
 print ""
 print -P "Get started:"
 print -P "  ${C}git checkout -b ralph/my-feature${R}"
-print -P "  ${C}./ralph/loop.sh interview${R}"
+print -P "  ${C}rl loop interview${R}"
 print ""

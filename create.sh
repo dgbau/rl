@@ -1,30 +1,38 @@
 #!/usr/bin/env zsh
-# create.sh — Create a new Nx project with the Ralph Loop pre-installed
+# create.sh — Create a new project with the Ralph Loop pre-installed
 #
 # Usage:
 #   rl create                    # Interactive mode (prompts for all options)
 #   rl create --no-prompt \      # Non-interactive mode (for programmatic use)
 #     --name my-app \
-#     --preset apps \
+#     --type nx --preset apps \
 #     --skills react,tailwind
+#
+# Project types:
+#   nx        Nx monorepo (default) — requires Node.js
+#   go        Go module (go mod init)
+#   python    Python project (uv init or plain)
+#   rust      Rust project (cargo init)
+#   bare      Empty git repo with rl configured
 #
 # Required with --no-prompt:
 #   --name NAME         Project name (kebab-case slug)
-#   --preset PRESET     Nx preset (apps, ts, next, react, node, etc.)
+#   --type TYPE         Project type (nx, go, python, rust, bare) — default: nx
+#   --preset PRESET     Nx preset (only for --type nx)
 #
 # Optional:
-#   --app-name NAME     App name within workspace
+#   --app-name NAME     App name within workspace (Nx only)
 #   --description TEXT  Project description
 #   --skills LIST       Comma-separated skill templates
-#   --tailwind          Install Tailwind CSS v4 (default for frontend presets)
+#   --tailwind          Install Tailwind CSS v4 (Nx frontend presets)
 #   --no-tailwind       Skip Tailwind
-#   --strict-ts         Enable TypeScript strict mode (default: true)
+#   --strict-ts         Enable TypeScript strict mode (default: true for Nx)
 #   --no-strict-ts      Disable TypeScript strict mode
 #   --openspec          Enable OpenSpec spec-driven development
 #   --no-openspec       Disable OpenSpec (default)
 #   --github            Create GitHub repository
 #   --no-github         Skip GitHub repo creation (default)
-#   --no-prompt         Skip all interactive prompts (requires --name, --preset)
+#   --no-prompt         Skip all interactive prompts
 
 set -euo pipefail
 source "${0:A:h}/lib/common.sh"
@@ -33,6 +41,7 @@ source "${0:A:h}/lib/common.sh"
 # Defaults
 # ---------------------------------------------------------------------------
 local NO_PROMPT=false
+local project_type=""  # nx, go, python, rust, bare
 local project_name=""
 local project_desc=""
 local nx_preset=""
@@ -49,6 +58,7 @@ local -a selected_skills=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --no-prompt)     NO_PROMPT=true; shift ;;
+    --type)          project_type="$2"; shift 2 ;;
     --name)          project_name="$2"; shift 2 ;;
     --preset)        nx_preset="$2"; shift 2 ;;
     --app-name)      app_name="$2"; shift 2 ;;
@@ -99,10 +109,8 @@ done
 # ---------------------------------------------------------------------------
 check_prereqs || exit 1
 
-if ! (( $+commands[npx] )); then
-  print -P "${ERR}${B}Error:${R} npx is required. Install Node.js first."
-  exit 1
-fi
+# Default type to nx for backward compat
+project_type="${project_type:-nx}"
 
 # ---------------------------------------------------------------------------
 # Interview (interactive) or validate flags (non-interactive)
@@ -113,11 +121,12 @@ if [[ "$NO_PROMPT" == "true" ]]; then
     print -P "${ERR}${B}Error:${R} --name is required with --no-prompt"
     exit 1
   fi
-  if [[ -z "$nx_preset" ]]; then
-    print -P "${ERR}${B}Error:${R} --preset is required with --no-prompt"
+  validate_slug "$project_name" || exit 1
+
+  if [[ "$project_type" == "nx" && -z "$nx_preset" ]]; then
+    print -P "${ERR}${B}Error:${R} --preset is required with --no-prompt for Nx projects"
     exit 1
   fi
-  validate_slug "$project_name" || exit 1
 
   # Smart defaults for tailwind if not explicitly set
   if [[ -z "$use_tailwind" ]]; then
@@ -150,53 +159,66 @@ else
     project_desc=$(prompt_text "Project description (optional)" "")
   fi
 
-  # Nx preset
-  if [[ -z "$nx_preset" ]]; then
+  # Project type
+  if [[ -z "$project_type" ]] || [[ "$project_type" == "nx" && -z "$nx_preset" ]]; then
     print ""
-    local -a presets=()
-    while IFS= read -r line; do
-      [[ -n "$line" ]] && presets+=("$line")
-    done < <(query_presets)
-    nx_preset=$(prompt_select "Nx preset:" "${presets[@]}")
+    project_type=$(prompt_select "Project type:" "typescript" "nx" "python" "go" "rust" "bare")
   fi
 
-  # App name (derived from preset)
-  if [[ -z "$app_name" ]]; then
-    case "$nx_preset" in
-      next|react|angular|vue|nuxt)
-        app_name=$(prompt_text "App name" "web")
-        ;;
-      node|nest|express)
-        app_name=$(prompt_text "App name" "api")
-        ;;
-      apps|ts)
-        app_name=$(prompt_text "App name (optional)" "")
-        ;;
-      *)
-        app_name=$(prompt_text "App name (optional)" "")
-        ;;
-    esac
-  fi
+  # Type-specific options
+  case "$project_type" in
+    nx)
+      # Nx-specific: preset, app name, tailwind, TS strict
+      if ! (( $+commands[npx] )); then
+        print -P "${ERR}${B}Error:${R} npx is required for Nx projects. Install Node.js first."
+        exit 1
+      fi
 
-  # Tailwind
-  if [[ -z "$use_tailwind" ]]; then
-    use_tailwind=false
-    print -P "\n${C}${B}Essential Foundations${R}"
-    case "$nx_preset" in
-      next|react|angular|vue|nuxt)
-        if prompt_yn "Install Tailwind CSS v4?"; then
-          use_tailwind=true
-        fi
-        ;;
-    esac
-  fi
+      if [[ -z "$nx_preset" ]]; then
+        print ""
+        local -a presets=()
+        while IFS= read -r line; do
+          [[ -n "$line" ]] && presets+=("$line")
+        done < <(query_presets)
+        nx_preset=$(prompt_select "Nx preset:" "${presets[@]}")
+      fi
 
-  # TypeScript strict
-  if ! prompt_yn "TypeScript strict mode?"; then
-    use_ts_strict=false
-  fi
+      if [[ -z "$app_name" ]]; then
+        case "$nx_preset" in
+          next|react|angular|vue|nuxt) app_name=$(prompt_text "App name" "web") ;;
+          node|nest|express) app_name=$(prompt_text "App name" "api") ;;
+          *) app_name=$(prompt_text "App name (optional)" "") ;;
+        esac
+      fi
 
-  # Skill templates
+      if [[ -z "$use_tailwind" ]]; then
+        use_tailwind=false
+        case "$nx_preset" in
+          next|react|angular|vue|nuxt)
+            prompt_yn "Install Tailwind CSS v4?" && use_tailwind=true
+            ;;
+        esac
+      fi
+
+      if ! prompt_yn "TypeScript strict mode?"; then
+        use_ts_strict=false
+      fi
+      ;;
+    typescript)
+      use_ts_strict=true
+      use_tailwind=false
+      ;;
+    python)
+      use_tailwind=false
+      use_ts_strict=false
+      ;;
+    go|rust|bare)
+      use_tailwind=false
+      use_ts_strict=false
+      ;;
+  esac
+
+  # Skill templates (all types)
   if (( ${#selected_skills} == 0 )); then
     local -a available_templates=()
     for tdir in "$RL_ROOT"/resources/skills/templates/*/; do
@@ -214,7 +236,7 @@ else
     fi
   fi
 
-  # OpenSpec
+  # OpenSpec (all types)
   print ""
   if prompt_yn "Use OpenSpec for spec-driven development?" "n"; then
     use_openspec=true
@@ -228,11 +250,11 @@ else
   # Confirm
   print -P "\n${C}${B}=== Summary ===${R}"
   print -P "  ${D}Project:${R}    $project_name"
+  print -P "  ${D}Type:${R}       $project_type"
   print -P "  ${D}Directory:${R}  $HOME/src/$project_name"
-  print -P "  ${D}Preset:${R}     $nx_preset"
+  [[ "$project_type" == "nx" ]] && print -P "  ${D}Preset:${R}     $nx_preset"
   [[ -n "$app_name" ]] && print -P "  ${D}App:${R}        $app_name"
-  print -P "  ${D}Tailwind:${R}   $use_tailwind"
-  print -P "  ${D}TS strict:${R}  $use_ts_strict"
+  [[ "$use_tailwind" == "true" ]] && print -P "  ${D}Tailwind:${R}   true"
   print -P "  ${D}OpenSpec:${R}   $use_openspec"
   print -P "  ${D}GitHub:${R}     $create_github"
   (( ${#selected_skills} )) && print -P "  ${D}Skills:${R}     ${(j:, :)selected_skills}"
@@ -254,65 +276,190 @@ if [[ -d "$project_dir" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Create Nx workspace
+# Scaffold project based on type
 # ---------------------------------------------------------------------------
-print -P "\n${C}${B}Creating Nx workspace...${R}"
-
 local parent_dir="${project_dir:h}"
 mkdir -p "$parent_dir"
 
-local -a nx_args=(
-  "$project_name"
-  "--preset=$nx_preset"
-  "--packageManager=pnpm"
-  "--nxCloud=skip"
-  "--no-interactive"
-)
-[[ -n "$app_name" ]] && nx_args+=("--appName=$app_name")
+case "$project_type" in
+  nx)
+    if ! (( $+commands[npx] )); then
+      print -P "${ERR}${B}Error:${R} npx is required for Nx projects. Install Node.js first."
+      exit 1
+    fi
 
-( cd "$parent_dir" && npx create-nx-workspace@latest "${nx_args[@]}" )
+    print -P "\n${C}${B}Creating Nx workspace...${R}"
+    local -a nx_args=(
+      "$project_name"
+      "--preset=$nx_preset"
+      "--packageManager=pnpm"
+      "--nxCloud=skip"
+      "--no-interactive"
+    )
+    [[ -n "$app_name" ]] && nx_args+=("--appName=$app_name")
+    ( cd "$parent_dir" && npx create-nx-workspace@latest "${nx_args[@]}" )
 
-# ---------------------------------------------------------------------------
-# Install essential foundations
-# ---------------------------------------------------------------------------
-if [[ "$use_tailwind" == "true" ]]; then
-  print -P "\n${C}${B}Installing Tailwind CSS v4...${R}"
-  ( cd "$project_dir" && pnpm add -D tailwindcss@^4 @tailwindcss/postcss@^4 )
-
-  # Create postcss.config.mjs if it doesn't exist
-  if [[ ! -f "$project_dir/postcss.config.mjs" ]]; then
-    cat > "$project_dir/postcss.config.mjs" <<'EOF'
+    # Tailwind
+    if [[ "$use_tailwind" == "true" ]]; then
+      print -P "\n${C}${B}Installing Tailwind CSS v4...${R}"
+      ( cd "$project_dir" && pnpm add -D tailwindcss@^4 @tailwindcss/postcss@^4 )
+      if [[ ! -f "$project_dir/postcss.config.mjs" ]]; then
+        cat > "$project_dir/postcss.config.mjs" <<'TWEOF'
 export default {
   plugins: {
     "@tailwindcss/postcss": {},
   },
 };
-EOF
-  fi
-fi
-
-if [[ "$use_ts_strict" == "true" ]]; then
-  # Ensure strict mode in tsconfig
-  local tsconfig="$project_dir/tsconfig.base.json"
-  [[ ! -f "$tsconfig" ]] && tsconfig="$project_dir/tsconfig.json"
-  if [[ -f "$tsconfig" ]]; then
-    local current_strict
-    current_strict=$(jq -r '.compilerOptions.strict // false' "$tsconfig" 2>/dev/null || echo "false")
-    if [[ "$current_strict" != "true" ]]; then
-      local tmp
-      tmp=$(mktemp)
-      jq '.compilerOptions.strict = true' "$tsconfig" > "$tmp" && mv "$tmp" "$tsconfig"
-      print -P "  ${G}enabled:${R} TypeScript strict mode"
+TWEOF
+      fi
     fi
-  fi
-fi
+
+    # TypeScript strict mode
+    if [[ "$use_ts_strict" == "true" ]]; then
+      local tsconfig="$project_dir/tsconfig.base.json"
+      [[ ! -f "$tsconfig" ]] && tsconfig="$project_dir/tsconfig.json"
+      if [[ -f "$tsconfig" ]]; then
+        local current_strict
+        current_strict=$(jq -r '.compilerOptions.strict // false' "$tsconfig" 2>/dev/null || echo "false")
+        if [[ "$current_strict" != "true" ]]; then
+          local tmp; tmp=$(mktemp)
+          jq '.compilerOptions.strict = true' "$tsconfig" > "$tmp" && mv "$tmp" "$tsconfig"
+          print -P "  ${G}enabled:${R} TypeScript strict mode"
+        fi
+      fi
+    fi
+    ;;
+
+  typescript)
+    print -P "\n${C}${B}Creating TypeScript project...${R}"
+    mkdir -p "$project_dir/src" "$project_dir/tests"
+
+    # Detect preferred package manager
+    local ts_pm="npm"
+    (( $+commands[pnpm] )) && ts_pm="pnpm"
+
+    cat > "$project_dir/package.json" <<TSEOF
+{
+  "name": "$project_name",
+  "version": "0.1.0",
+  "private": true,
+  "description": "${project_desc:-}",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vitest": "^3",
+    "eslint": "^9"
+  }
+}
+TSEOF
+
+    cat > "$project_dir/tsconfig.json" <<'TSCEOF'
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "declaration": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}
+TSCEOF
+
+    print -P "  ${D}Installing dependencies with $ts_pm...${R}"
+    ( cd "$project_dir" && $ts_pm install )
+    ;;
+
+  python)
+    print -P "\n${C}${B}Creating Python project...${R}"
+    mkdir -p "$project_dir"
+
+    if (( $+commands[uv] )); then
+      ( cd "$parent_dir" && uv init "$project_name" )
+    else
+      # Manual Python project setup
+      mkdir -p "$project_dir/src/$project_name" "$project_dir/tests"
+      cat > "$project_dir/pyproject.toml" <<PYEOF
+[project]
+name = "$project_name"
+version = "0.1.0"
+description = "${project_desc:-}"
+requires-python = ">=3.11"
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff", "mypy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.mypy]
+strict = true
+PYEOF
+      cat > "$project_dir/src/$project_name/__init__.py" <<< ""
+      cat > "$project_dir/tests/__init__.py" <<< ""
+    fi
+    ;;
+
+  go)
+    print -P "\n${C}${B}Creating Go module...${R}"
+    mkdir -p "$project_dir"
+    ( cd "$project_dir" && go mod init "$project_name" 2>/dev/null || true )
+    mkdir -p "$project_dir/cmd/$project_name" "$project_dir/internal"
+    cat > "$project_dir/cmd/$project_name/main.go" <<GOEOF
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("$project_name")
+}
+GOEOF
+    ;;
+
+  rust)
+    print -P "\n${C}${B}Creating Rust project...${R}"
+    if (( $+commands[cargo] )); then
+      ( cd "$parent_dir" && cargo init "$project_name" )
+    else
+      print -P "${ERR}${B}Error:${R} cargo is required for Rust projects."
+      exit 1
+    fi
+    ;;
+
+  bare)
+    print -P "\n${C}${B}Creating bare project...${R}"
+    mkdir -p "$project_dir"
+    ;;
+
+  *)
+    print -P "${ERR}${B}Error:${R} Unknown project type: $project_type"
+    print -P "${D}Supported types: nx, python, go, rust, bare${R}"
+    exit 1
+    ;;
+esac
 
 # ---------------------------------------------------------------------------
-# Install OpenSpec (if opted in)
+# Initialize OpenSpec (if opted in — uses globally installed CLI)
 # ---------------------------------------------------------------------------
 if [[ "$use_openspec" == "true" ]]; then
-  print -P "\n${C}${B}Installing OpenSpec...${R}"
-  ( cd "$project_dir" && pnpm add -D @fission-ai/openspec && npx openspec init 2>/dev/null || true )
+  if (( $+commands[openspec] )) || (( $+commands[npx] )) && npx openspec --version &>/dev/null 2>&1; then
+    print -P "\n${C}${B}Initializing OpenSpec...${R}"
+    ( cd "$project_dir" && openspec init 2>/dev/null || npx openspec init 2>/dev/null || true )
+  else
+    print -P "\n${Y}Warning:${R} OpenSpec CLI not found. Install globally: npm install -g @fission-ai/openspec"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -345,12 +492,10 @@ print -P "\n${C}${B}Setting up git...${R}"
   fi
 
   git add -A
-  git commit -m "chore: scaffold $project_name with ralph loop
+  git commit -m "chore: scaffold $project_name with rl ($project_type)
 
-- Nx preset: $nx_preset
-- OpenSpec: $use_openspec
-- Tailwind: $use_tailwind
-- TypeScript strict: $use_ts_strict"
+- Type: $project_type
+- OpenSpec: $use_openspec"
 )
 
 # ---------------------------------------------------------------------------
@@ -373,4 +518,4 @@ print ""
 print -P "${Y}Next steps:${R}"
 print "  1. cd $project_dir"
 print "  2. git checkout -b ralph/my-feature"
-print "  3. ./ralph/loop.sh interview"
+print "  3. rl loop interview"

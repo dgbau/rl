@@ -1,0 +1,245 @@
+#!/usr/bin/env zsh
+set -euo pipefail
+
+# migrate.sh — Migrate a repo from legacy ralph/ model to .rl/ model
+#
+# Handles two scenarios:
+#   1. Repos installed via `rl install` (have .ralphrc + ralph/)
+#   2. Repos with custom ralph/ (like sfi-webapps, no .ralphrc, env-var config)
+#
+# Usage:
+#   rl migrate [directory]
+
+source "${0:A:h}/lib/common.sh"
+
+TARGET_DIR="${1:-.}"
+TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
+
+print -P "${C}${B}Ralph Loop Migration${R}"
+print ""
+
+# Must be a git repo
+if ! git -C "$TARGET_DIR" rev-parse --is-inside-work-tree &>/dev/null; then
+  print -P "${ERR}${B}Error:${R} $TARGET_DIR is not a git repository."
+  exit 1
+fi
+
+# Check for something to migrate
+if [[ ! -f "$TARGET_DIR/.ralphrc" && ! -d "$TARGET_DIR/ralph" ]]; then
+  print -P "${ERR}${B}Error:${R} No legacy ralph installation found (no .ralphrc or ralph/ directory)."
+  exit 1
+fi
+
+if [[ -f "$TARGET_DIR/.rl/config" ]]; then
+  print -P "${Y}Warning:${R} .rl/config already exists. Already migrated?"
+  exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# Detect scenario: rl-installed vs custom ralph/
+# ---------------------------------------------------------------------------
+SCENARIO="unknown"
+if [[ -f "$TARGET_DIR/.ralphrc" ]]; then
+  SCENARIO="rl-installed"
+  print -P "${D}Detected: rl-installed (has .ralphrc)${R}"
+elif [[ -d "$TARGET_DIR/ralph" && ! -f "$TARGET_DIR/.ralphrc" ]]; then
+  SCENARIO="custom"
+  print -P "${D}Detected: custom ralph/ installation (no .ralphrc)${R}"
+  print -P "${D}Will create .rl/config from project detection.${R}"
+fi
+print ""
+
+# ---------------------------------------------------------------------------
+# Step 1: Create .rl/config
+# ---------------------------------------------------------------------------
+mkdir -p "$TARGET_DIR/.rl/skills"
+
+if [[ "$SCENARIO" == "rl-installed" ]]; then
+  print -P "${D}Converting .ralphrc → .rl/config...${R}"
+  {
+    echo "# .rl/config — Ralph Loop configuration"
+    echo "# Migrated from .ralphrc by rl migrate ($(date -u '+%Y-%m-%d'))"
+    echo ""
+    grep -v '^#' "$TARGET_DIR/.ralphrc" | grep -v '^$' || true
+    echo ""
+    echo "# Timeout settings (seconds)"
+    echo "BACKPRESSURE_TIMEOUT=600"
+    echo "E2E_TIMEOUT=300"
+  } > "$TARGET_DIR/.rl/config"
+  print -P "  ${G}+${R} .rl/config created from .ralphrc"
+
+elif [[ "$SCENARIO" == "custom" ]]; then
+  print -P "${D}Detecting project context for .rl/config...${R}"
+  eval "$(detect_project "$TARGET_DIR")"
+
+  # Try to extract config from ralph/loop.sh if it exists
+  local extracted_backpressure=""
+  local extracted_base_branch="$BASE_BRANCH"
+  local extracted_openspec="false"
+  if [[ -f "$TARGET_DIR/ralph/loop.sh" ]]; then
+    # Look for hardcoded backpressure commands
+    # Extract actual command, not echo/log lines — look for array or variable assignment patterns
+    extracted_backpressure=$(grep -E '^\s*(local\s+)?cmd=|BACKPRESSURE.*=|^\s*npx nx' "$TARGET_DIR/ralph/loop.sh" 2>/dev/null \
+      | grep -v 'echo\|print\|TIMEOUT\|selfheal' \
+      | sed 's/.*cmd=(\(.*\))/\1/; s/.*="\(.*\)"/\1/; s/^ *//' \
+      | head -1 || true)
+    # If we got an array like 'npx nx run-many -t lint test build -p arch3 task-server', clean it
+    extracted_backpressure="${extracted_backpressure//\"/}"
+    # Check for OpenSpec usage
+    if grep -q 'openspec' "$TARGET_DIR/ralph/loop.sh" 2>/dev/null; then
+      extracted_openspec="true"
+    fi
+    # Check default base branch
+    local found_branch
+    found_branch=$(grep -m1 'BASE_BRANCH.*:-' "$TARGET_DIR/ralph/loop.sh" 2>/dev/null | sed 's/.*:-\([^}]*\)}.*/\1/' || true)
+    [[ -n "$found_branch" ]] && extracted_base_branch="$found_branch"
+  fi
+
+  # Use detected or extracted values
+  local bp_cmd="${extracted_backpressure:-${BACKPRESSURE_CMD:-npx nx affected -t lint test build}}"
+
+  generate_rl_config \
+    "$PROJECT_NAME" \
+    "$extracted_base_branch" \
+    "$extracted_openspec" \
+    "$USES_TAILWIND" \
+    "$USES_TS_STRICT" \
+    "$bp_cmd" \
+    "" \
+    "opus" \
+    "25" \
+    "90" \
+    > "$TARGET_DIR/.rl/config"
+
+  print -P "  ${G}+${R} .rl/config created from project detection"
+  print -P "  ${D}Review .rl/config and adjust settings as needed.${R}"
+fi
+
+# ---------------------------------------------------------------------------
+# Step 2: Handle ralph/ directory
+# ---------------------------------------------------------------------------
+if [[ -d "$TARGET_DIR/ralph" ]]; then
+  print ""
+
+  if [[ "$SCENARIO" == "custom" ]]; then
+    # Custom ralph/ — check for project-specific skills or overrides to preserve
+    print -P "${Y}This ralph/ directory contains custom files (not installed by rl).${R}"
+    print -P "${D}The loop runtime now lives in the rl toolkit and runs via 'rl loop'.${R}"
+    print ""
+    print -P "${D}Files in ralph/:${R}"
+    ls -1 "$TARGET_DIR/ralph/" 2>/dev/null | sed 's/^/  /'
+    print ""
+
+    # Check for project-specific PROMPT customizations
+    local has_custom_prompts=false
+    for pfile in "$TARGET_DIR/ralph"/PROMPT_*.md; do
+      [[ -f "$pfile" ]] || continue
+      local pname="${pfile:t}"
+      if [[ -f "$RL_ROOT/resources/core/$pname" ]]; then
+        if ! diff -q "$pfile" "$RL_ROOT/resources/core/$pname" &>/dev/null; then
+          has_custom_prompts=true
+          break
+        fi
+      fi
+    done
+
+    if [[ "$has_custom_prompts" == "true" ]]; then
+      print -P "${Y}Some PROMPT files differ from rl source.${R}"
+      print -P "${D}You may want to review these differences before removing ralph/.${R}"
+      print -P "${D}Custom prompts can be preserved as .rl/skills/ overrides or contributed back to rl.${R}"
+      print ""
+    fi
+
+    if prompt_yn "Remove ralph/ directory?" "n"; then
+      rm -rf "$TARGET_DIR/ralph"
+      print -P "  ${G}+${R} ralph/ removed"
+    else
+      print -P "  ${D}ralph/ kept — remove manually when ready${R}"
+    fi
+  else
+    # rl-installed ralph/ — safe to remove
+    print -P "${D}The ralph/ directory contains loop files now sourced from the rl toolkit.${R}"
+    if prompt_yn "Remove ralph/ directory?"; then
+      rm -rf "$TARGET_DIR/ralph"
+      print -P "  ${G}+${R} ralph/ removed"
+    else
+      print -P "  ${D}ralph/ kept — remove manually when ready${R}"
+    fi
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# Step 3: Remove old .ralphrc
+# ---------------------------------------------------------------------------
+if [[ -f "$TARGET_DIR/.ralphrc" ]]; then
+  rm "$TARGET_DIR/.ralphrc"
+  print -P "  ${G}+${R} .ralphrc removed (replaced by .rl/config)"
+fi
+
+# ---------------------------------------------------------------------------
+# Step 4: Update .gitignore
+# ---------------------------------------------------------------------------
+if [[ -f "$TARGET_DIR/.gitignore" ]]; then
+  local updated=false
+  if grep -q "ralph/copilot-reviews.md" "$TARGET_DIR/.gitignore" 2>/dev/null; then
+    sed -i '' 's|ralph/copilot-reviews\.md|.rl/copilot-reviews.md|g' "$TARGET_DIR/.gitignore"
+    sed -i '' 's|ralph/review-manifest\.json|.rl/review-manifest.json|g' "$TARGET_DIR/.gitignore"
+    sed -i '' 's|ralph/e2e-results\.md|.rl/e2e-results.md|g' "$TARGET_DIR/.gitignore"
+    sed -i '' 's|ralph/\.e2e-|.rl/.e2e-|g' "$TARGET_DIR/.gitignore"
+    updated=true
+  fi
+  # Also handle sfi-webapps style entries
+  if grep -q "ralph/.e2e-output" "$TARGET_DIR/.gitignore" 2>/dev/null; then
+    sed -i '' 's|ralph/\.e2e-output|.rl/.e2e-output|g' "$TARGET_DIR/.gitignore"
+    sed -i '' 's|ralph/\.e2e-raw-output|.rl/.e2e-raw-output|g' "$TARGET_DIR/.gitignore"
+    updated=true
+  fi
+  if [[ "$updated" == "true" ]]; then
+    print -P "  ${G}+${R} .gitignore updated"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# Step 5: Update CLAUDE.md and AGENTS.md references
+# ---------------------------------------------------------------------------
+if [[ -f "$TARGET_DIR/CLAUDE.md" ]]; then
+  if grep -q 'ralph/loop.sh\|ralph/README.md\|\.ralphrc' "$TARGET_DIR/CLAUDE.md" 2>/dev/null; then
+    sed -i '' 's|ralph/loop\.sh|rl loop|g' "$TARGET_DIR/CLAUDE.md"
+    sed -i '' 's|\./ralph/loop\.sh|rl loop|g' "$TARGET_DIR/CLAUDE.md"
+    sed -i '' 's|ralph/README\.md|.rl/config|g' "$TARGET_DIR/CLAUDE.md"
+    sed -i '' 's|\.ralphrc|.rl/config|g' "$TARGET_DIR/CLAUDE.md"
+    print -P "  ${G}+${R} CLAUDE.md references updated"
+  fi
+fi
+
+if [[ -f "$TARGET_DIR/AGENTS.md" ]]; then
+  if grep -q 'ralph/loop.sh\|\./ralph/loop\.sh' "$TARGET_DIR/AGENTS.md" 2>/dev/null; then
+    sed -i '' 's|\./ralph/loop\.sh|rl loop|g' "$TARGET_DIR/AGENTS.md"
+    sed -i '' 's|ralph/loop\.sh|rl loop|g' "$TARGET_DIR/AGENTS.md"
+    sed -i '' 's|ralph/README\.md|.rl/config|g' "$TARGET_DIR/AGENTS.md"
+    sed -i '' 's|\.ralphrc|.rl/config|g' "$TARGET_DIR/AGENTS.md"
+    print -P "  ${G}+${R} AGENTS.md references updated"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# Summary
+# ---------------------------------------------------------------------------
+print ""
+print -P "${G}${B}Migration complete!${R}"
+print ""
+print -P "  ${D}Configuration:${R} .rl/config"
+print -P "  ${D}Skills:${R}        .claude/skills/ (unchanged)"
+print -P "  ${D}Overrides:${R}     .rl/skills/ (add project-specific overrides here)"
+print ""
+print -P "Usage is now:"
+print -P "  ${C}rl loop interview${R}    # instead of ./ralph/loop.sh interview"
+print -P "  ${C}rl loop --auto --pr${R}  # instead of ./ralph/loop.sh --auto --pr"
+print ""
+if [[ "$SCENARIO" == "custom" ]]; then
+  print -P "${Y}Action needed:${R}"
+  print -P "  1. Review .rl/config and verify BACKPRESSURE_CMD is correct"
+  print -P "  2. Run 'rl skills sync' to populate .claude/skills/ from rl source"
+  print -P "  3. Move any project-specific skills to .rl/skills/"
+  print ""
+fi
