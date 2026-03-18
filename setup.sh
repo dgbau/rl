@@ -56,7 +56,7 @@ else
     SHELL_RC="$HOME/.bash_profile"
   fi
 
-  if [[ -n "$SHELL_RC" ]] && grep -q "src/rl" "$SHELL_RC" 2>/dev/null; then
+  if [[ -n "$SHELL_RC" ]] && grep -qF "$RL_DIR" "$SHELL_RC" 2>/dev/null; then
     ok "PATH entry found in ${SHELL_RC##*/} (may need: source $SHELL_RC)"
   elif [[ -n "$SHELL_RC" ]]; then
     ask "Add rl to PATH in ${SHELL_RC##*/}? [Y/n]"

@@ -48,7 +48,7 @@ Or manually: see [Manual Install](#manual-install) below.
 
 ```bash
 rl create --type typescript --name my-app
-cd ~/src/my-app
+cd my-app
 git checkout -b ralph/my-feature
 rl loop interview
 rl loop --auto --pr
@@ -58,7 +58,7 @@ rl loop --auto --pr
 
 ```bash
 rl create --type python --name my-tool
-cd ~/src/my-tool
+cd my-tool
 git checkout -b ralph/my-feature
 rl loop interview
 rl loop --auto --pr
@@ -68,7 +68,7 @@ rl loop --auto --pr
 
 ```bash
 rl create --type nx --name my-workspace --preset next
-cd ~/src/my-workspace
+cd my-workspace
 git checkout -b ralph/my-feature
 rl loop interview
 rl loop --auto --pr
@@ -113,7 +113,7 @@ If you prefer not to use `setup.sh`:
 ```bash
 git clone https://github.com/anthropic/rl.git <your-path>/rl
 # Pick one:
-echo 'export PATH="$HOME/src/rl:$PATH"' >> ~/.zshrc
+echo 'export PATH="<your-path>/rl:$PATH"' >> ~/.zshrc
 # or:
 ln -s <your-path>/rl/rl /usr/local/bin/rl
 ```
