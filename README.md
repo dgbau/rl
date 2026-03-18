@@ -33,8 +33,8 @@ The **Ralph Loop** — [originated by Geoffrey Huntley](https://ghuntley.com/loo
 ## Setup
 
 ```bash
-git clone https://github.com/anthropic/rl.git ~/src/rl
-cd ~/src/rl
+git clone https://github.com/anthropic/rl.git <your-path>/rl
+cd <your-path>/rl
 ./setup.sh    # Interactive wizard: adds to PATH, checks/installs dependencies
 ```
 
@@ -111,11 +111,11 @@ If you prefer not to use `setup.sh`:
 ### Add to PATH
 
 ```bash
-git clone https://github.com/anthropic/rl.git ~/src/rl
+git clone https://github.com/anthropic/rl.git <your-path>/rl
 # Pick one:
 echo 'export PATH="$HOME/src/rl:$PATH"' >> ~/.zshrc
 # or:
-ln -s ~/src/rl/rl /usr/local/bin/rl
+ln -s <your-path>/rl/rl /usr/local/bin/rl
 ```
 
 ### Update rl

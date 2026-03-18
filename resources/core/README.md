@@ -351,8 +351,8 @@ The `--dangerously-skip-permissions` flag lets Claude Code run commands without 
 
 This Ralph Loop was installed by the [rl toolkit](https://github.com/wedow/rl). To update:
 
-1. The `self-update` skill in `.claude/skills/self-update/` guides updating from `~/src/rl/resources/`
-2. Or manually: `rl update` (pulls latest from rl repo)
+1. Run `rl update` to pull the latest toolkit version
+2. Run `rl skills sync` to refresh skills in this repo
 
 ---
 
