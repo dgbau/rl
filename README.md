@@ -211,52 +211,56 @@ rl update    # git pull --ff-only under the hood
 
 ### Skill system
 
-Skills are markdown files that teach Claude how to work in your project. There are two directories:
+Skills are markdown files that teach Claude how to work in your project.
 
-| Directory | What's in it | Committed to git? |
-|-----------|-------------|-------------------|
-| `.claude/skills/` | **Effective skills** — what Claude actually reads | No (auto-generated) |
-| `.rl/skills/` | **Your overrides** — project-specific customizations | Yes |
+#### How skills flow
 
-Every `rl loop` run rebuilds `.claude/skills/` from scratch:
-
-1. Copy **universal** skills from rl source (code-quality, security, etc.)
-2. Copy **rl** skills from rl source (backpressure, ticket-management, etc.)
-3. Copy **your overrides** from `.rl/skills/` on top — **these always win**
-4. Generate `SKILLS_INDEX.md` for the LLM to scan
-
-**The key concept:** `.claude/skills/` is disposable — it gets rebuilt every run. `.rl/skills/` is yours — it persists, it's in git, and it overrides anything from rl source.
-
-#### When should you create an override?
-
-- The loop improved a skill with project-specific patterns (your Nx targets, your API conventions)
-- You want to customize how a workflow skill behaves for this project
-- A skill from rl source doesn't fit your project's approach
-
-#### How to create an override
-
-```bash
-# Override an rl/universal skill (copies current source as starting point):
-rl skills override openspec-apply-change
-# Now edit .rl/skills/openspec-apply-change/SKILL.md with your changes
-
-# Add a technology skill from the catalog:
-rl skills add tailwind
-# Now edit .rl/skills/tailwind/SKILL.md — fill in [FILL] sections
-
-# Create a completely new project-specific skill:
-rl skills new my-project-patterns
-# Now edit .claude/skills/my-project-patterns/SKILL.md
+```
+rl source (on your machine)          Your project repo
+───────────────────────               ──────────────────
+resources/skills/universal/*  ──┐
+resources/skills/rl/*         ──┼──▶  .claude/skills/*    ◀── Claude reads these
+                                │
+                     .rl/skills/*  ──┘  (copied last, wins)
 ```
 
-#### What happens during a merge conflict in `.claude/skills/`?
+**Every `rl loop` run**, the sync rebuilds `.claude/skills/` completely:
 
-If a branch modified a skill in `.claude/skills/` that gets overwritten by sync:
-1. The useful changes belong in `.rl/skills/` (as an override), not in `.claude/skills/`
-2. Accept the rl source version in `.claude/skills/` (it'll be overwritten on next sync anyway)
-3. Move the project-specific improvements to `.rl/skills/<skill-name>/SKILL.md`
+1. Copies universal + rl skills from wherever rl is installed on your machine
+2. Copies your project overrides from `.rl/skills/` on top (same filename = overwrite)
+3. Generates `SKILLS_INDEX.md` so the LLM can scan what's available
 
-The bootstrapper writes relevant skill names into each ticket's `## Skills` section. The build agent reads only those skills for each task.
+**This means:**
+- `.claude/skills/` is rebuilt every iteration — **don't edit files here directly**, changes are lost on next run
+- `.rl/skills/` is yours, committed to git, never touched by sync — **put your customizations here**
+- When you `rl update` (pulling new rl source), the next loop run automatically picks up improved skills
+- Skills the loop creates with new names (e.g. `.claude/skills/my-auth-patterns/`) survive sync because rl source doesn't have a file with that name to overwrite
+
+#### Overriding a skill
+
+An "override" means: put a file with the same name in `.rl/skills/` so it gets copied last and wins.
+
+```bash
+# Start from the current rl source version as a base:
+rl skills override openspec-apply-change
+# Creates .rl/skills/openspec-apply-change/SKILL.md
+# Edit it with your project-specific patterns
+
+# Or add a technology skill from the catalog:
+rl skills add tailwind
+# Creates .rl/skills/tailwind/SKILL.md — fill in the [FILL] sections
+```
+
+#### Merge conflicts in `.claude/skills/`
+
+If a branch modified a skill in `.claude/skills/` that sync overwrites:
+1. The useful changes belong in `.rl/skills/`, not `.claude/skills/`
+2. Copy the improved version to `.rl/skills/<skill-name>/SKILL.md`
+3. Accept the rl source version in `.claude/skills/` (it's overwritten on next sync anyway)
+
+#### How skills connect to tickets
+
+The bootstrapper writes relevant skill names into each ticket's `## Skills` section. The build agent reads `SKILLS_INDEX.md` to understand what's available, then reads only the skills listed in the ticket.
 
 ---
 
