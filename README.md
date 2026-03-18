@@ -211,29 +211,52 @@ rl update    # git pull --ff-only under the hood
 
 ### Skill system
 
-Skills are markdown files in `.claude/skills/` that teach Claude project-specific patterns. They're synced automatically on every `rl loop` run:
+Skills are markdown files that teach Claude how to work in your project. There are two directories:
 
-1. **Universal skills** — software engineering principles (always synced)
-2. **rl skills** — Ralph Loop operations, with conditional sync (`<!-- sync: openspec -->`, `<!-- sync: dogfooding -->`)
-3. **Project overrides** from `.rl/skills/` (highest precedence)
-4. **SKILLS_INDEX.md** — auto-generated index for LLM skill selection
+| Directory | What's in it | Committed to git? |
+|-----------|-------------|-------------------|
+| `.claude/skills/` | **Effective skills** — what Claude actually reads | No (auto-generated) |
+| `.rl/skills/` | **Your overrides** — project-specific customizations | Yes |
+
+Every `rl loop` run rebuilds `.claude/skills/` from scratch:
+
+1. Copy **universal** skills from rl source (code-quality, security, etc.)
+2. Copy **rl** skills from rl source (backpressure, ticket-management, etc.)
+3. Copy **your overrides** from `.rl/skills/` on top — **these always win**
+4. Generate `SKILLS_INDEX.md` for the LLM to scan
+
+**The key concept:** `.claude/skills/` is disposable — it gets rebuilt every run. `.rl/skills/` is yours — it persists, it's in git, and it overrides anything from rl source.
+
+#### When should you create an override?
+
+- The loop improved a skill with project-specific patterns (your Nx targets, your API conventions)
+- You want to customize how a workflow skill behaves for this project
+- A skill from rl source doesn't fit your project's approach
+
+#### How to create an override
+
+```bash
+# Override an rl/universal skill (copies current source as starting point):
+rl skills override openspec-apply-change
+# Now edit .rl/skills/openspec-apply-change/SKILL.md with your changes
+
+# Add a technology skill from the catalog:
+rl skills add tailwind
+# Now edit .rl/skills/tailwind/SKILL.md — fill in [FILL] sections
+
+# Create a completely new project-specific skill:
+rl skills new my-project-patterns
+# Now edit .claude/skills/my-project-patterns/SKILL.md
+```
+
+#### What happens during a merge conflict in `.claude/skills/`?
+
+If a branch modified a skill in `.claude/skills/` that gets overwritten by sync:
+1. The useful changes belong in `.rl/skills/` (as an override), not in `.claude/skills/`
+2. Accept the rl source version in `.claude/skills/` (it'll be overwritten on next sync anyway)
+3. Move the project-specific improvements to `.rl/skills/<skill-name>/SKILL.md`
 
 The bootstrapper writes relevant skill names into each ticket's `## Skills` section. The build agent reads only those skills for each task.
-
-To customize a workflow skill for your project:
-
-```bash
-rl skills override backpressure   # Copies to .rl/skills/backpressure/
-# Edit .rl/skills/backpressure/SKILL.md
-```
-
-To add a technology template:
-
-```bash
-rl skills list                    # See available templates
-rl skills add tailwind            # Copies to .rl/skills/tailwind/
-# Fill in the [FILL] sections
-```
 
 ---
 
