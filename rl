@@ -41,8 +41,7 @@ case "${1:-}" in
     echo "rl updated to $(cd "$RL_DIR" && git log --oneline -1)"
     ;;
   version|-v|--version)
-    local ver=$(cd "$RL_DIR" && git describe --tags --always 2>/dev/null || echo "dev")
-    print "rl $ver"
+    print "rl $(cd "$RL_DIR" && git describe --tags --always 2>/dev/null || echo "dev")"
     ;;
   -h|--help|"")
     print "Usage: rl <command> [args...]"

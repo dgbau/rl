@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Post replies to PR review comments and resolve threads using the review manifest.
-# Reads: ralph/review-manifest.json (produced by Claude during review triage)
+# Reads: .rl/review-manifest.json (produced by Claude during review triage)
 #
 # Exit codes:
 #   0 -- all replies posted and threads resolved (or no manifest to process)
@@ -10,7 +10,7 @@ set -euo pipefail
 #   2 -- operational error (no PR found, gh not authenticated, missing manifest)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Support RL_WORK env var for manifest location, fall back to SCRIPT_DIR (legacy)
+# Support RL_WORK env var for manifest location, fall back to SCRIPT_DIR
 WORK_DIR="${RL_WORK:-$SCRIPT_DIR}"
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || cd "$SCRIPT_DIR/.." && pwd)"
 MANIFEST_FILE="$WORK_DIR/review-manifest.json"

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Fetch ALL PR review comments (Copilot + human reviewers) for the current branch
-# Outputs: ralph/copilot-reviews.md
+# Outputs: .rl/copilot-reviews.md (via RL_WORK)
 #
 # Exit codes:
 #   0 -- reviews found (unresolved comments written to output file)
@@ -10,7 +10,7 @@ set -euo pipefail
 #   2 -- operational error (no PR found, gh not authenticated, API failure)
 
 SCRIPT_DIR="${0:A:h}"
-# Support RL_WORK env var for output location, fall back to SCRIPT_DIR (legacy)
+# Support RL_WORK env var for output location, fall back to SCRIPT_DIR
 WORK_DIR="${RL_WORK:-$SCRIPT_DIR}"
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "${SCRIPT_DIR:h}")"
 OUTPUT_FILE="$WORK_DIR/copilot-reviews.md"

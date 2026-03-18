@@ -401,7 +401,7 @@ cmd_new() {
 
   validate_slug "$name" || exit 1
 
-  # _TEMPLATE.md lives in domain/ directory
+  # _TEMPLATE.md lives in tools/ directory
   local template_src="$RL_ROOT/resources/skills/tools/_TEMPLATE.md"
   if [[ ! -f "$template_src" ]]; then
     print -P "${ERR}${B}Error:${R} Meta-template not found at $template_src"
@@ -535,7 +535,7 @@ case "$subcmd" in
     print "  new <name>        Create new skill in current repo"
     print "  new --global <n>  Create new reusable template in rl toolkit"
     print "  sync              Sync skills from rl source to .claude/skills/"
-    print "  override <name>   Copy a workflow skill to .rl/skills/ for customization"
+    print "  override <name>   Copy an rl skill to .rl/skills/ for customization"
     print "  add-openspec      Install OpenSpec skills + commands + npm package"
     ;;
   *)

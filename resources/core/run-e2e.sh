@@ -4,15 +4,15 @@ set -uo pipefail
 
 # Run E2E tests and capture results for the Ralph Loop
 # Usage:
-#   ./ralph/run-e2e.sh          # Run all E2E tests
-#   ./ralph/run-e2e.sh <filter> # Run filtered tests
+#   rl loop e2e                 # Run all E2E tests
+#   rl loop e2e <filter>        # Run filtered tests
 #
 # Exit codes (inverted for loop logic):
 #   0 = tests FAILED (loop should continue fixing)
 #   1 = all tests PASSED (loop should stop)
 #
 # Configuration:
-#   Set E2E_CMD in .ralphrc to customize the test command.
+#   Set E2E_CMD in .rl/config to customize the test command.
 #   The command should produce JSON output or exit non-zero on failure.
 
 SCRIPT_DIR="${0:A:h}"
@@ -23,7 +23,7 @@ RAW_OUTPUT="$WORK_DIR/.e2e-raw-output.txt"
 
 cd "$REPO_ROOT"
 
-# Load config (.rl/config > .ralphrc)
+# Load config (.rl/config > .ralphrc legacy fallback)
 if [[ -f "$REPO_ROOT/.rl/config" ]]; then
   source "$REPO_ROOT/.rl/config"
 elif [[ -f "$REPO_ROOT/.ralphrc" ]]; then
@@ -74,7 +74,7 @@ if [[ ! -s "$RAW_OUTPUT" ]]; then
     echo "Command: \`$E2E_COMMAND\`"
     echo "Exit code: $E2E_EXIT_CODE"
     echo ""
-    echo "Check that E2E_CMD in .ralphrc is correct and services are running."
+    echo "Check that E2E_CMD in .rl/config is correct and services are running."
   } > "$OUTPUT_FILE"
   rm -f "$RAW_OUTPUT"
   exit 0

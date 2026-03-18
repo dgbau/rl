@@ -27,7 +27,7 @@ set -euo pipefail
 # SAFETY: Ralph NEVER merges or closes PRs. Humans merge.
 
 # ---------------------------------------------------------------------------
-# Path resolution: supports both new model (rl loop) and legacy (rl loop)
+# Path resolution
 # ---------------------------------------------------------------------------
 SCRIPT_DIR="${0:A:h}"
 
@@ -37,11 +37,11 @@ if [[ -n "${RL_REPO_ROOT:-}" ]]; then
   REPO_ROOT="$RL_REPO_ROOT"
   RL_CORE="$SCRIPT_DIR"
 elif [[ -f "${SCRIPT_DIR:h}/.rl/config" ]]; then
-  # New model: loop.sh lives in rl toolkit, repo has .rl/config
+  # loop.sh lives in rl toolkit, repo has .rl/config
   REPO_ROOT="${SCRIPT_DIR:h}"
   RL_CORE="$SCRIPT_DIR"
 elif [[ -f "${SCRIPT_DIR:h}/.ralphrc" ]]; then
-  # Legacy model: loop.sh lives in repo's ralph/ directory
+  # Legacy: repo still has .ralphrc (run `rl migrate` to upgrade)
   REPO_ROOT="${SCRIPT_DIR:h}"
   RL_CORE="$SCRIPT_DIR"
 else
@@ -54,7 +54,7 @@ fi
 RL_WORK="${REPO_ROOT}/.rl"
 mkdir -p "$RL_WORK" 2>/dev/null || true
 
-# Load project configuration: .rl/config (new) > .ralphrc (legacy)
+# Load project configuration: .rl/config > .ralphrc (legacy fallback)
 # Source config with nounset temporarily off — config files may reference
 # variables that are only defined at runtime (e.g. in log strings)
 if [[ -f "$REPO_ROOT/.rl/config" ]]; then
