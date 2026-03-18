@@ -20,9 +20,13 @@ The **Ralph Loop** — [originated by Geoffrey Huntley](https://ghuntley.com/loo
 
 ### Why tk + OpenSpec?
 
-Most AI coding tools assume GitHub Issues or Jira for task tracking. But those systems are external — the agent can't read or write them without API tokens and extra complexity. `tk` keeps tickets as plain markdown files *inside your repo*, versioned alongside the code. The agent reads them with `cat`, updates them with file edits. No API, no auth, no external state.
+**tk** and **OpenSpec** solve different problems. You always need tk. OpenSpec is optional but valuable for larger projects.
 
-OpenSpec is optional but powerful for larger projects. Instead of a one-shot implementation plan that goes stale, delta specs capture *what changed and why* alongside main specs that describe the system as-built. When the agent implements a ticket, it reads the relevant spec — not a months-old design doc.
+**tk** is the task engine. It breaks work into ordered, dependency-tracked tickets stored as markdown files inside your repo. The agent picks the next unblocked task with `tk ready`, marks it in progress, implements it, closes it. No API, no auth, no external state — the agent reads and writes tickets with plain file operations. Without tk, the agent has no queue and no ordering.
+
+**OpenSpec** is the knowledge layer. It maintains living specs that describe what the system *actually does* — not what was planned months ago. When a feature is built, delta specs capture what changed and why. Main specs are updated to reflect the system as-built. Without OpenSpec, the agent works from a one-shot `IMPLEMENTATION_PLAN.md` that goes stale as the project evolves.
+
+**Together**, they complement each other: OpenSpec provides the *what and why* (structured specs, design rationale, acceptance criteria), tk provides the *when and in what order* (priority, dependencies, lifecycle). The bootstrapper reads the spec to understand scope, then creates tk tickets with the right ordering. The build agent reads the relevant spec for context, then implements the ticket.
 
 ---
 
