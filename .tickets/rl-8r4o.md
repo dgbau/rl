@@ -6,7 +6,7 @@ links: []
 created: 2026-02-21T17:38:50Z
 type: feature
 priority: 1
-assignee: David Bau
+assignee: ""
 tags: [skills, ai]
 ---
 # rl skills new --global should auto-fill skill content with Claude

@@ -6,7 +6,7 @@ links: []
 created: 2026-02-21T18:10:23Z
 type: task
 priority: 1
-assignee: David Bau
+assignee: ""
 tags: [bootstrap, prompt]
 ---
 # Bootstrap should not hard-code 3-8 ticket limit

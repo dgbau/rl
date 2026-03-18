@@ -6,7 +6,7 @@ links: []
 created: 2026-02-21T20:21:21Z
 type: task
 priority: 1
-assignee: David Bau
+assignee: ""
 tags: [electron, backpressure]
 ---
 # Electron backpressure should include runtime smoke test

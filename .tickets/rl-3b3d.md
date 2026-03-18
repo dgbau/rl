@@ -6,7 +6,7 @@ links: []
 created: 2026-02-21T17:46:18Z
 type: feature
 priority: 0
-assignee: David Bau
+assignee: ""
 tags: [create, cli]
 ---
 # Add --no-prompt flag to rl create for programmatic project creation

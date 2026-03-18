@@ -33,9 +33,9 @@ The **Ralph Loop** — [originated by Geoffrey Huntley](https://ghuntley.com/loo
 ## Setup
 
 ```bash
-git clone https://github.com/anthropic/rl.git <your-path>/rl
-cd <your-path>/rl
-./setup.sh    # Interactive wizard: adds to PATH, checks/installs dependencies
+git clone https://github.com/anthropic/rl.git
+cd rl
+./setup.sh    # Adds to PATH, checks/installs all dependencies
 ```
 
 Or manually: see [Manual Install](#manual-install) below.
@@ -108,15 +108,15 @@ If you prefer not to use `setup.sh`:
 | [jq](https://jqlang.github.io/jq/) | `brew install jq` | JSON processing |
 | [OpenSpec](https://github.com/fission-ai/openspec) (optional) | `npm install -g @fission-ai/openspec` | Spec-driven development |
 
-### Add to PATH
+### Clone and run setup
 
 ```bash
-git clone https://github.com/anthropic/rl.git <your-path>/rl
-# Pick one:
-echo 'export PATH="<your-path>/rl:$PATH"' >> ~/.zshrc
-# or:
-ln -s <your-path>/rl/rl /usr/local/bin/rl
+git clone https://github.com/anthropic/rl.git
+cd rl
+./setup.sh    # Adds to PATH, checks dependencies
 ```
+
+`setup.sh` detects where you cloned it and adds the correct path to your shell rc file. No manual PATH editing needed.
 
 ### Update rl
 

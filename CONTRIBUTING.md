@@ -5,8 +5,8 @@
 rl dogfoods itself — it uses its own loop for development.
 
 ```bash
-git clone https://github.com/anthropic/rl.git <your-path>/rl
-cd <your-path>/rl
+git clone https://github.com/anthropic/rl.git
+cd rl
 ./setup.sh
 ```
 

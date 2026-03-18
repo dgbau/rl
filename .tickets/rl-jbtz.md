@@ -6,7 +6,7 @@ links: []
 created: 2026-02-21T17:39:09Z
 type: task
 priority: 2
-assignee: David Bau
+assignee: ""
 tags: [skills, docs]
 ---
 # Add SKILLS_INDEX.md entries for electron and anthropic-sdk skills

@@ -6,7 +6,7 @@ links: []
 created: 2026-02-21T17:39:02Z
 type: task
 priority: 2
-assignee: David Bau
+assignee: ""
 tags: [install, skills]
 ---
 # Add detection signals for electron and anthropic-sdk to install.sh
