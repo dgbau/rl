@@ -9,7 +9,7 @@ E2E_CMD=""
 CLAUDE_MODEL="opus"
 MAX_ITERATIONS=25
 REVIEW_WAIT=90
-USE_OPENSPEC=false
+USE_OPENSPEC=true
 IS_RL_TOOLKIT=true
 
 # Timeout settings (seconds)
