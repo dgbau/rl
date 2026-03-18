@@ -62,6 +62,25 @@ These are synced to every rl-managed project. They teach Claude how to operate t
 3. Optionally add `<!-- sync: openspec -->` or `<!-- sync: dogfooding -->` for conditional sync
 4. Test by running `rl skills sync` in a target repo
 
+## Creating a release
+
+After merging changes to main:
+
+```bash
+rl release --dry-run    # preview changelog and version bump
+rl release              # create release (prompts for confirmation)
+```
+
+This auto-detects the version bump from conventional commits (`feat` = minor, `fix` = patch, `BREAKING CHANGE` = major), generates CHANGELOG.md, creates a git tag, advances the `stable` tag, and creates a GitHub Release.
+
+## Dogfooding safely
+
+When working on rl itself, be aware:
+- **Don't use `--auto`** unless you've confirmed the prompt. The loop blocks it by default.
+- Changes to `resources/core/`, `lib/common.sh`, or `skills.sh` affect the running loop on the next iteration.
+- Always run full backpressure before committing.
+- If the loop breaks, recover with: `git checkout stable`
+
 ## Reporting issues
 
 File an issue with:

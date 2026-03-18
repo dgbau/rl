@@ -375,6 +375,52 @@ All types get `.rl/config`, `CLAUDE.md`, `AGENTS.md`, `LESSONS.md`, and `.claude
 
 ---
 
+## Releases and versioning
+
+rl uses [semantic versioning](https://semver.org/) with automated changelog generation from conventional commits.
+
+```bash
+rl release              # auto-detect version bump from commits
+rl release v0.2.0       # force a specific version
+rl release --dry-run    # preview without making changes
+rl version              # show current version
+```
+
+Each release:
+1. Generates `CHANGELOG.md` entries from commits since the last tag
+2. Creates a git tag (`v0.1.0`, `v0.2.0`, etc.)
+3. Advances the `stable` tag to the new release
+4. Pushes tags and creates a GitHub Release
+
+### The `stable` tag
+
+The `stable` tag points to the latest tested release. It exists for **dogfooding safety** — when rl develops itself, the loop can modify the same files it runs from. The `stable` tag provides a known-good reference point to recover from if a self-modification breaks the loop.
+
+For normal projects (not developing rl itself), the `stable` tag is not used — rl runs from wherever it's installed.
+
+### Updating
+
+```bash
+rl update               # pulls latest from main (bleeding edge)
+git -C $(which rl | xargs dirname) checkout v0.2.0  # pin to a release
+```
+
+---
+
+## Dogfooding
+
+rl develops itself using its own loop. This creates a unique challenge: the agent modifies the same scripts, skills, and prompts that the loop runs from.
+
+**Safety measures:**
+- **`--auto` blocked by default** — When the loop detects it's operating on the rl toolkit, `--auto` mode requires explicit confirmation. This prevents the loop from silently breaking itself without a human checkpoint between iterations.
+- **Backpressure catches syntax errors** — `zsh -n` on all scripts before every commit.
+- **Feature branches only** — All changes happen on branches. The human reviews and merges.
+- **`stable` tag** — If a self-modification breaks the loop, you can recover by checking out the `stable` tag.
+
+**What backpressure does NOT catch:** Logic bugs, corrupted skill instructions, or config changes that are valid shell but semantically wrong. This is why `--auto` is gated — a human needs to review each iteration's changes before the next one runs.
+
+---
+
 ## Acknowledgments
 
 The Ralph Loop pattern was originated by [Geoffrey Huntley](https://ghuntley.com/specs), who demonstrated that AI agents produce dramatically better results when given fresh context per task, hard quality gates, and spec-driven requirements. This toolkit implements and extends his approach with hybrid ticketing, skill management, and multi-stack support.

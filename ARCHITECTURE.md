@@ -69,7 +69,9 @@ This ensures:
 | `rl loop [mode]` | `resources/core/loop.sh` | Run the Ralph Loop (interview, bootstrap, build, amend, review, archive, e2e) |
 | `rl skills` | `skills.sh` | Manage skill templates (list, add, installed, sync, override, new) |
 | `rl migrate` | `migrate.sh` | Migrate from legacy ralph/ model to .rl/ model |
+| `rl release` | `release.sh` | Create release with auto-changelog, tag, GitHub Release |
 | `rl update` | (inline) | Update rl toolkit (git pull) |
+| `rl version` | (inline) | Show current version from git tags |
 
 ## Ralph Loop Modes
 
@@ -105,6 +107,13 @@ Precedence: project override > template > stack > language > universal > workflo
 Environment variable overrides: `RL_*` or `RALPH_*` vars take precedence over config file values.
 
 Key config variables: `PROJECT_NAME`, `BASE_BRANCH`, `BACKPRESSURE_CMD`, `E2E_CMD`, `USE_OPENSPEC`, `BACKPRESSURE_TIMEOUT`, `E2E_TIMEOUT`, `CLAUDE_MODEL`, `MAX_ITERATIONS`, `REVIEW_WAIT`
+
+## Release Model
+
+- Semantic versioning: `feat` = minor bump, `fix` = patch, `BREAKING CHANGE` = major
+- `rl release` generates CHANGELOG.md from conventional commits, tags, and creates GitHub Release
+- The `stable` tag always points to the latest release
+- Dogfooding safety: when rl develops itself, `--auto` is blocked by default to prevent self-modification without human review. Recovery: `git checkout stable`
 
 ## Detection & Generation Pipeline
 

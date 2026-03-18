@@ -33,6 +33,10 @@ When dogfooding, the loop modifies the same files it runs from. `--auto` mode is
 
 **Safe dogfooding:** Run without `--auto` so you review each iteration's changes before the next one runs. If you must use `--auto`, the loop will ask for explicit confirmation.
 
+**Recovery:** If a self-modification breaks the loop: `git checkout stable` to return to the last released version. The `stable` tag is advanced by `rl release` after each tested release.
+
+**Releasing:** After changes are merged and tested: `rl release` auto-generates CHANGELOG.md, creates a version tag, advances `stable`, and creates a GitHub Release.
+
 ## How to Test Changes
 
 1. **Shell syntax**: `zsh -n <modified-script>` (or run full backpressure)
