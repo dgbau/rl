@@ -132,7 +132,7 @@ fi
 # ---------------------------------------------------------------------------
 # Confirm
 # ---------------------------------------------------------------------------
-ask "Create release ${NEXT_VERSION}? [Y/n]"
+print -n "  ${C}?${R} Create release ${NEXT_VERSION}? [Y/n] "
 read -r ans
 if [[ ! "${ans:-Y}" =~ ^[Yy] ]]; then
   print "Aborted."
