@@ -247,11 +247,36 @@ sync_skills() {
 
   setopt local_options nullglob
   mkdir -p "$REPO_ROOT/.claude/skills"
+  mkdir -p "$REPO_ROOT/.rl/skills"
+
+  # Helper: before overwriting a skill, check if it was modified by the agent.
+  # If so, auto-promote the modified version to .rl/skills/ so it persists.
+  promote_if_modified() {
+    local skill_name="$1" source_file="$2"
+    local target="$REPO_ROOT/.claude/skills/$skill_name/SKILL.md"
+    local override="$REPO_ROOT/.rl/skills/$skill_name/SKILL.md"
+
+    # Skip if there's already an override (user manages it)
+    [[ -f "$override" ]] && return
+
+    # Skip if target doesn't exist yet (first sync)
+    [[ -f "$target" ]] || return
+
+    # Compare target (what's in .claude/skills/) with what we're about to write
+    if ! diff -q "$target" "$source_file" &>/dev/null; then
+      # The file in .claude/skills/ differs from what sync would write —
+      # the agent (or user) modified it. Promote to .rl/skills/ to persist.
+      mkdir -p "$REPO_ROOT/.rl/skills/$skill_name"
+      cp "$target" "$override"
+      echo "  ↑ Promoted modified skill to .rl/skills/$skill_name/ (persists across syncs)"
+    fi
+  }
 
   # Universal skills (always)
   for skill_dir in "$skills_src/universal"/*/; do
     [[ -d "$skill_dir" ]] || continue
     local skill_name="${skill_dir:t}"
+    promote_if_modified "$skill_name" "$skill_dir/SKILL.md"
     mkdir -p "$REPO_ROOT/.claude/skills/$skill_name"
     cp "$skill_dir/SKILL.md" "$REPO_ROOT/.claude/skills/$skill_name/" 2>/dev/null || true
   done
@@ -270,11 +295,12 @@ sync_skills() {
       openspec)   [[ "$USE_OPENSPEC" != "true" ]] && continue ;;
       dogfooding) [[ ! -f "$REPO_ROOT/resources/core/loop.sh" ]] && continue ;;
     esac
+    promote_if_modified "$skill_name" "$skill_dir/SKILL.md"
     mkdir -p "$REPO_ROOT/.claude/skills/$skill_name"
     cp "$skill_dir/SKILL.md" "$REPO_ROOT/.claude/skills/$skill_name/" 2>/dev/null || true
   done
 
-  # Layer 3: Apply project-specific overrides (highest precedence)
+  # Apply project-specific overrides last (highest precedence)
   if [[ -d "$REPO_ROOT/.rl/skills" ]]; then
     for skill_dir in "$REPO_ROOT/.rl/skills"/*/; do
       [[ -d "$skill_dir" ]] || continue

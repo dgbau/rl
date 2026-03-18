@@ -224,16 +224,17 @@ resources/skills/rl/*         ──┼──▶  .claude/skills/*    ◀── 
                      .rl/skills/*  ──┘  (copied last, wins)
 ```
 
-**Every `rl loop` run**, the sync rebuilds `.claude/skills/` completely:
+**Every `rl loop` run**, the sync rebuilds `.claude/skills/`:
 
-1. Copies universal + rl skills from wherever rl is installed on your machine
-2. Copies your project overrides from `.rl/skills/` on top (same filename = overwrite)
-3. Generates `SKILLS_INDEX.md` so the LLM can scan what's available
+1. **Detect modifications** — before overwriting, checks if any skill in `.claude/skills/` was changed since last sync (by the agent or by you). If so, auto-promotes the modified version to `.rl/skills/` so it persists.
+2. **Copy from rl source** — universal + rl skills from wherever rl is installed
+3. **Apply overrides** — copies `.rl/skills/` on top (same filename = overwrite)
+4. **Generate index** — creates `SKILLS_INDEX.md` for the LLM
 
 **This means:**
-- `.claude/skills/` is rebuilt every iteration — **don't edit files here directly**, changes are lost on next run
-- `.rl/skills/` is yours, committed to git, never touched by sync — **put your customizations here**
-- When you `rl update` (pulling new rl source), the next loop run automatically picks up improved skills
+- If the agent improves a skill during a build, the improvement is **automatically saved** to `.rl/skills/` on the next sync
+- `.rl/skills/` is yours, committed to git, never touched by sync — project-specific customizations live here
+- When you `rl update` (pulling new rl source), the next loop run picks up improved skills — but your overrides still win
 - Skills the loop creates with new names (e.g. `.claude/skills/my-auth-patterns/`) survive sync because rl source doesn't have a file with that name to overwrite
 
 #### Overriding a skill

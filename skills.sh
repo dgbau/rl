@@ -127,6 +127,23 @@ cmd_sync() {
   mkdir -p "$REPO_ROOT/.claude/skills"
 
   local count=0
+  local promoted=0
+  mkdir -p "$REPO_ROOT/.rl/skills"
+
+  # Helper: auto-promote modified skills to .rl/skills/ before overwriting
+  promote_if_modified() {
+    local skill_name="$1" source_file="$2"
+    local target="$REPO_ROOT/.claude/skills/$skill_name/SKILL.md"
+    local override="$REPO_ROOT/.rl/skills/$skill_name/SKILL.md"
+    [[ -f "$override" ]] && return  # already has override
+    [[ -f "$target" ]] || return    # first sync
+    if ! diff -q "$target" "$source_file" &>/dev/null; then
+      mkdir -p "$REPO_ROOT/.rl/skills/$skill_name"
+      cp "$target" "$override"
+      promoted=$((promoted + 1))
+      print -P "  ${Y}↑${R} Promoted ${Y}$skill_name${R} to .rl/skills/ (modified since last sync)"
+    fi
+  }
 
   # Detect if we're developing the rl toolkit itself
   local is_rl_toolkit=false
@@ -146,10 +163,15 @@ cmd_sync() {
   for skill_dir in "$skills_src/universal"/*/; do
     [[ -d "$skill_dir" ]] || continue
     local skill_name="${skill_dir:t}"
+    promote_if_modified "$skill_name" "$skill_dir/SKILL.md"
     mkdir -p "$REPO_ROOT/.claude/skills/$skill_name"
     cp "$skill_dir/SKILL.md" "$REPO_ROOT/.claude/skills/$skill_name/"
     count=$((count + 1))
   done
+
+  # Note: promote_if_modified only needs to run for rl-source skills (above).
+  # It checks: "did the file in .claude/skills/ change vs what I'm about to write?"
+  # If yes, it copies the modified version to .rl/skills/ before overwriting.
 
   # --- rl skills (check sync condition per skill) ---
   # Skills in rl/ use <!-- sync: CONDITION --> metadata:
@@ -177,6 +199,7 @@ cmd_sync() {
         ;;
     esac
 
+    promote_if_modified "$skill_name" "$skill_dir/SKILL.md"
     mkdir -p "$REPO_ROOT/.claude/skills/$skill_name"
     cp "$skill_dir/SKILL.md" "$REPO_ROOT/.claude/skills/$skill_name/"
     count=$((count + 1))
@@ -252,6 +275,9 @@ cmd_sync() {
     done
   } > "$REPO_ROOT/.claude/skills/SKILLS_INDEX.md"
 
+  if (( promoted > 0 )); then
+    print -P "${Y}${B}Promoted:${R} $promoted modified skill(s) to .rl/skills/ (will persist across syncs)"
+  fi
   print -P "${G}${B}Synced:${R} $count skills from source, $override_count project overrides applied."
   print -P "${D}Updated .claude/skills/.gitignore and SKILLS_INDEX.md${R}"
 }
