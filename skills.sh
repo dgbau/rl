@@ -211,8 +211,7 @@ cmd_sync() {
       [[ -d "$skill_dir" ]] || continue
       local sync_cond="always"
       if [[ -f "$skill_dir/SKILL.md" ]]; then
-        local found_cond
-        found_cond=$(sed -n 's/.*<!-- *sync: *\([a-z]*\) *-->.*/\1/p' "$skill_dir/SKILL.md" 2>/dev/null | head -1)
+        local found_cond=$(sed -n 's/.*<!-- *sync: *\([a-z]*\) *-->.*/\1/p' "$skill_dir/SKILL.md" 2>/dev/null | head -1)
         [[ -n "$found_cond" ]] && sync_cond="$found_cond"
       fi
       case "$sync_cond" in
