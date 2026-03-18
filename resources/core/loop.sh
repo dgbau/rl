@@ -119,6 +119,43 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# ---------------------------------------------------------------------------
+# Dogfooding safety: warn when --auto is used on the rl toolkit itself
+# The loop modifies the same files it runs from — auto mode risks breaking
+# the loop mid-run with no human checkpoint.
+# ---------------------------------------------------------------------------
+if [[ "$AUTO_MODE" == "true" && -f "$REPO_ROOT/resources/core/loop.sh" && -f "$REPO_ROOT/lib/common.sh" ]]; then
+  echo ""
+  echo "⚠️  DOGFOODING SAFETY WARNING"
+  echo ""
+  echo "You are running --auto on the rl toolkit itself."
+  echo "In auto mode, the loop can modify its own scripts, skills, and prompts"
+  echo "without a human checkpoint between iterations. If an iteration introduces"
+  echo "a bug in loop.sh, skills.sh, or lib/common.sh, the next iteration may fail"
+  echo "or behave incorrectly — and the loop can't fix itself."
+  echo ""
+  echo "Recommended: run without --auto so you can review changes between iterations."
+  echo ""
+  if [[ -t 0 ]]; then
+    # Interactive terminal — ask for confirmation
+    print -n "Continue with --auto anyway? [y/N] "
+    read -r confirm
+    if [[ ! "${confirm:-N}" =~ ^[Yy] ]]; then
+      echo "Aborting. Run without --auto for safer dogfooding."
+      exit 0
+    fi
+    echo "Proceeding with --auto (you've been warned)."
+    echo ""
+  else
+    # Non-interactive (piped/detached) — refuse
+    echo "ERROR: --auto on the rl toolkit requires interactive confirmation."
+    echo "Run interactively, or set RL_DOGFOOD_AUTO=true to override."
+    if [[ "${RL_DOGFOOD_AUTO:-}" != "true" ]]; then
+      exit 1
+    fi
+  fi
+fi
+
 # Derive push behavior
 if [[ -z "$PUSH_MODE" ]]; then
   if [[ "$AUTO_MODE" == "true" ]]; then

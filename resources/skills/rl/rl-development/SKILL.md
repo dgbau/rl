@@ -24,6 +24,15 @@ This skill is synced automatically when `rl loop` runs inside the rl toolkit rep
 
 **Rule:** Changes to `resources/` affect every project. Test thoroughly before committing.
 
+## Self-Modification Risk
+
+When dogfooding, the loop modifies the same files it runs from. `--auto` mode is **blocked by default** because:
+- An iteration that breaks `loop.sh` means the next iteration can't start
+- An iteration that corrupts a PROMPT or skill gives wrong instructions to all future iterations
+- Backpressure catches syntax errors but not logic bugs
+
+**Safe dogfooding:** Run without `--auto` so you review each iteration's changes before the next one runs. If you must use `--auto`, the loop will ask for explicit confirmation.
+
 ## How to Test Changes
 
 1. **Shell syntax**: `zsh -n <modified-script>` (or run full backpressure)
