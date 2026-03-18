@@ -204,29 +204,38 @@ sync_skills() {
   local skills_src="$rl_home/resources/skills"
 
   # Only sync if we can find the rl skills source
-  if [[ ! -d "$skills_src/workflow" ]]; then
+  if [[ ! -d "$skills_src/rl" ]]; then
     return
   fi
 
+  setopt local_options nullglob
   mkdir -p "$REPO_ROOT/.claude/skills"
 
-  # Layer 1: Copy workflow skills (always)
-  for skill_dir in "$skills_src/workflow"/*/; do
+  # Universal skills (always)
+  for skill_dir in "$skills_src/universal"/*/; do
     [[ -d "$skill_dir" ]] || continue
     local skill_name="${skill_dir:t}"
     mkdir -p "$REPO_ROOT/.claude/skills/$skill_name"
     cp "$skill_dir/SKILL.md" "$REPO_ROOT/.claude/skills/$skill_name/" 2>/dev/null || true
   done
 
-  # Layer 2: Copy OpenSpec skills (if enabled)
-  if [[ "$USE_OPENSPEC" == "true" && -d "$skills_src/workflow-openspec" ]]; then
-    for skill_dir in "$skills_src/workflow-openspec"/*/; do
-      [[ -d "$skill_dir" ]] || continue
-      local skill_name="${skill_dir:t}"
-      mkdir -p "$REPO_ROOT/.claude/skills/$skill_name"
-      cp "$skill_dir/SKILL.md" "$REPO_ROOT/.claude/skills/$skill_name/" 2>/dev/null || true
-    done
-  fi
+  # rl skills (check sync condition per skill)
+  for skill_dir in "$skills_src/rl"/*/; do
+    [[ -d "$skill_dir" ]] || continue
+    local skill_name="${skill_dir:t}"
+    # Read sync condition from SKILL.md
+    local sync_cond="always"
+    if [[ -f "$skill_dir/SKILL.md" ]]; then
+      local found_cond=$(sed -n 's/.*<!-- *sync: *\([a-z]*\) *-->.*/\1/p' "$skill_dir/SKILL.md" 2>/dev/null | head -1)
+      [[ -n "$found_cond" ]] && sync_cond="$found_cond"
+    fi
+    case "$sync_cond" in
+      openspec)   [[ "$USE_OPENSPEC" != "true" ]] && continue ;;
+      dogfooding) [[ ! -f "$REPO_ROOT/resources/core/loop.sh" ]] && continue ;;
+    esac
+    mkdir -p "$REPO_ROOT/.claude/skills/$skill_name"
+    cp "$skill_dir/SKILL.md" "$REPO_ROOT/.claude/skills/$skill_name/" 2>/dev/null || true
+  done
 
   # Layer 3: Apply project-specific overrides (highest precedence)
   if [[ -d "$REPO_ROOT/.rl/skills" ]]; then

@@ -1,8 +1,40 @@
 # rl — Ralph Loop Toolkit
 
-**rl** orchestrates autonomous AI development using [Claude Code](https://docs.anthropic.com/en/docs/claude-code). It spawns fresh Claude instances per task, tracks state via git, and manages skills as a single source of truth across all your projects.
+**rl** turns [Claude Code](https://docs.anthropic.com/en/docs/claude-code) into an autonomous software engineer that builds your project while you do something else.
 
-Ralph **never** merges or closes PRs. A human always performs the final merge.
+It manages the full development cycle — interviewing you about what to build, breaking work into tickets, implementing them one at a time with quality gates, creating pull requests, and responding to review feedback — across any stack.
+
+## Why?
+
+AI coding assistants are powerful but stateless. You paste context, get code, paste more context, lose track of what's done, and end up project-managing the AI instead of building. The longer the session runs, the worse the output gets as context fills up.
+
+The **Ralph Loop** — [originated by Geoffrey Huntley](https://ghuntley.com/loop/) — solves this with a simple insight: **fresh context per task, hard quality gates, git as memory.** Each iteration starts a clean Claude session, picks one ticket, implements it, runs lint/test/build, and commits. State lives in git history, tickets, specs, and skills — not in a degrading context window.
+
+**rl** is a toolkit that implements and extends this pattern:
+
+- **Any stack** — TypeScript, Python, Go, Rust, JVM, C/C++, Nx monorepos
+- **Hybrid ticketing** — [`tk`](https://github.com/wedow/ticket) stores tickets as markdown files in your repo (git-native, no external service), with dependency tracking and priority ordering
+- **Optional spec-driven development** — [`OpenSpec`](https://github.com/fission-ai/openspec) maintains living system documentation that evolves with your code. Specs become the source of truth for what the system does, not just what was planned
+- **Skills as shared knowledge** — reusable agent instructions synced from a single source of truth, with per-project overrides
+- **Human-in-the-loop safety** — Ralph creates draft PRs but **never merges or closes them.** A human always performs the final merge
+
+### Why tk + OpenSpec?
+
+Most AI coding tools assume GitHub Issues or Jira for task tracking. But those systems are external — the agent can't read or write them without API tokens and extra complexity. `tk` keeps tickets as plain markdown files *inside your repo*, versioned alongside the code. The agent reads them with `cat`, updates them with file edits. No API, no auth, no external state.
+
+OpenSpec is optional but powerful for larger projects. Instead of a one-shot implementation plan that goes stale, delta specs capture *what changed and why* alongside main specs that describe the system as-built. When the agent implements a ticket, it reads the relevant spec — not a months-old design doc.
+
+---
+
+## Setup
+
+```bash
+git clone https://github.com/anthropic/rl.git ~/src/rl
+cd ~/src/rl
+./setup.sh    # Interactive wizard: adds to PATH, checks/installs dependencies
+```
+
+Or manually: see [Manual Install](#manual-install) below.
 
 ---
 
@@ -58,32 +90,34 @@ rl loop interview
 
 ---
 
-## Install
+## Manual Install
+
+If you prefer not to use `setup.sh`:
 
 ### Prerequisites
 
 | Tool | Install | Purpose |
 |------|---------|---------|
 | [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | `npm install -g @anthropic-ai/claude-code` | AI agent |
-| [tk](https://github.com/wedow/ticket) | `brew tap wedow/tools && brew install ticket` | Ticket management |
+| [tk](https://github.com/wedow/ticket) | `brew tap wedow/tools && brew install ticket` | Git-native ticket management |
 | [gh](https://cli.github.com/) | `brew install gh && gh auth login` | GitHub integration |
 | [jq](https://jqlang.github.io/jq/) | `brew install jq` | JSON processing |
 | [OpenSpec](https://github.com/fission-ai/openspec) (optional) | `npm install -g @fission-ai/openspec` | Spec-driven development |
 
-### Install rl
+### Add to PATH
 
 ```bash
-git clone <rl-repo-url> ~/src/rl
-# Add to PATH (pick one):
+git clone https://github.com/anthropic/rl.git ~/src/rl
+# Pick one:
+echo 'export PATH="$HOME/src/rl:$PATH"' >> ~/.zshrc
+# or:
 ln -s ~/src/rl/rl /usr/local/bin/rl
-# or add to .zshrc:
-export PATH="$HOME/src/rl:$PATH"
 ```
 
 ### Update rl
 
 ```bash
-rl update
+rl update    # git pull --ff-only under the hood
 ```
 
 ---
@@ -160,7 +194,7 @@ rl update
 |------|---------|----------|
 | `.rl/config` | Project configuration | Yes |
 | `.rl/skills/` | Project-specific skill overrides | Yes |
-| `.claude/skills/` | Effective skills (synced from rl + overrides) | Yes |
+| `.claude/skills/` | Effective skills (synced from rl + overrides) | Project-specific only* |
 | `CLAUDE.md` | Claude Code project config | Yes |
 | `AGENTS.md` | Operational guide | Yes |
 | `LESSONS.md` | Cumulative learnings | Yes |
@@ -175,9 +209,12 @@ rl update
 
 Skills are markdown files in `.claude/skills/` that teach Claude project-specific patterns. They're synced automatically on every `rl loop` run:
 
-1. **Workflow skills** from rl source (always synced)
-2. **OpenSpec skills** from rl source (if USE_OPENSPEC=true)
+1. **Universal skills** — software engineering principles (always synced)
+2. **rl skills** — Ralph Loop operations, with conditional sync (`<!-- sync: openspec -->`, `<!-- sync: dogfooding -->`)
 3. **Project overrides** from `.rl/skills/` (highest precedence)
+4. **SKILLS_INDEX.md** — auto-generated index for LLM skill selection
+
+The bootstrapper writes relevant skill names into each ticket's `## Skills` section. The build agent reads only those skills for each task.
 
 To customize a workflow skill for your project:
 
@@ -334,6 +371,14 @@ All types get `.rl/config`, `CLAUDE.md`, `AGENTS.md`, `LESSONS.md`, and `.claude
 
 ---
 
+## Acknowledgments
+
+The Ralph Loop pattern was originated by [Geoffrey Huntley](https://ghuntley.com/specs), who demonstrated that AI agents produce dramatically better results when given fresh context per task, hard quality gates, and spec-driven requirements. This toolkit implements and extends his approach with hybrid ticketing, skill management, and multi-stack support.
+
 ## License
 
 MIT. See [LICENSE](LICENSE) and [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES).
+
+---
+
+*\* `rl skills sync` generates a `.gitignore` inside `.claude/skills/` that excludes synced workflow skills (managed by rl) while keeping project-specific skills committed. This ensures synced skills always come from the rl source of truth, while your project-specific knowledge stays in version control.*

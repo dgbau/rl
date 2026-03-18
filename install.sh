@@ -131,7 +131,7 @@ if [[ "$NO_PROMPT" != "true" ]]; then
   # Skill templates
   if [[ ${#SELECTED_SKILLS[@]} -eq 0 ]]; then
     local -a available_templates=()
-    for template_dir in "$RL_ROOT/resources/skills/templates"/*/; do
+    for template_dir in "$RL_ROOT/resources/skills/tools"/*/*/; do
       local tname=$(basename "$template_dir")
       [[ "$tname" == "_TEMPLATE" ]] && continue
       [[ -f "$template_dir/SKILL.md" ]] && available_templates+=("$tname")
@@ -352,27 +352,39 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Install workflow skills
+# Install skills (uses same logic as rl skills sync)
 # ---------------------------------------------------------------------------
-print -P "${D}Installing workflow skills...${R}"
+print -P "${D}Installing skills...${R}"
 mkdir -p "$TARGET_DIR/.claude/skills"
 
-# Always install core workflow skills
-for skill_dir in "$RL_ROOT/resources/skills/workflow"/*/; do
+# Universal skills (always)
+for skill_dir in "$RL_ROOT/resources/skills/universal"/*/; do
+  [[ -d "$skill_dir" ]] || continue
   local skill_name=$(basename "$skill_dir")
   mkdir -p "$TARGET_DIR/.claude/skills/$skill_name"
   cp "$skill_dir/SKILL.md" "$TARGET_DIR/.claude/skills/$skill_name/"
 done
 
-# Install OpenSpec skills + commands if opted in
-if [[ "$USE_OPENSPEC" == "true" ]]; then
-  print -P "${D}Installing OpenSpec skills and commands...${R}"
-  for skill_dir in "$RL_ROOT/resources/skills/workflow-openspec"/*/; do
-    local skill_name=$(basename "$skill_dir")
-    mkdir -p "$TARGET_DIR/.claude/skills/$skill_name"
-    cp "$skill_dir/SKILL.md" "$TARGET_DIR/.claude/skills/$skill_name/"
-  done
+# rl skills (always, plus conditional openspec)
+for skill_dir in "$RL_ROOT/resources/skills/rl"/*/; do
+  [[ -d "$skill_dir" ]] || continue
+  local skill_name=$(basename "$skill_dir")
+  # Check sync condition
+  local sync_cond="always"
+  if [[ -f "$skill_dir/SKILL.md" ]]; then
+    local found_cond=$(sed -n 's/.*<!-- *sync: *\([a-z]*\) *-->.*/\1/p' "$skill_dir/SKILL.md" 2>/dev/null | head -1)
+    [[ -n "$found_cond" ]] && sync_cond="$found_cond"
+  fi
+  case "$sync_cond" in
+    openspec)   [[ "$USE_OPENSPEC" != "true" ]] && continue ;;
+    dogfooding) continue ;; # Never install dogfooding skills in target repos
+  esac
+  mkdir -p "$TARGET_DIR/.claude/skills/$skill_name"
+  cp "$skill_dir/SKILL.md" "$TARGET_DIR/.claude/skills/$skill_name/"
+done
 
+# Install OpenSpec commands if opted in
+if [[ "$USE_OPENSPEC" == "true" ]]; then
   mkdir -p "$TARGET_DIR/.claude/commands/opsx"
   for cmd_file in "$RL_ROOT/resources/commands/opsx"/*.md; do
     [[ -f "$cmd_file" ]] && cp "$cmd_file" "$TARGET_DIR/.claude/commands/opsx/"
@@ -380,18 +392,25 @@ if [[ "$USE_OPENSPEC" == "true" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Install selected skill templates
+# Install selected tool skills
 # ---------------------------------------------------------------------------
 if [[ ${#SELECTED_SKILLS[@]} -gt 0 ]]; then
-  print -P "${D}Installing skill templates...${R}"
+  print -P "${D}Installing tool skills...${R}"
   for skill in "${SELECTED_SKILLS[@]}"; do
-    local template_dir="$RL_ROOT/resources/skills/templates/$skill"
-    if [[ -f "$template_dir/SKILL.md" ]]; then
+    # Search tools/<category>/<skill>/
+    local found_dir=""
+    for cat_dir in "$RL_ROOT/resources/skills/tools"/*/; do
+      if [[ -f "$cat_dir/$skill/SKILL.md" ]]; then
+        found_dir="$cat_dir/$skill"
+        break
+      fi
+    done
+    if [[ -n "$found_dir" ]]; then
       mkdir -p "$TARGET_DIR/.claude/skills/$skill"
-      cp "$template_dir/SKILL.md" "$TARGET_DIR/.claude/skills/$skill/"
+      cp "$found_dir/SKILL.md" "$TARGET_DIR/.claude/skills/$skill/"
       print -P "  ${G}+${R} $skill"
     else
-      print -P "  ${Y}?${R} $skill (template not found, skipping)"
+      print -P "  ${Y}?${R} $skill (not found, skipping)"
     fi
   done
 fi

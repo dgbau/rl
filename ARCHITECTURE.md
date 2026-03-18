@@ -21,9 +21,9 @@ resources/core/           → Loop runtime (NOT copied to repos — sourced at r
   CLAUDE.md.template      → Template for generated CLAUDE.md
   ralphrc.template        → Template for config (legacy)
 resources/skills/         → Skill source of truth (synced to repos at runtime)
-  workflow/               → Always synced (core operational skills)
-  workflow-openspec/      → Synced when USE_OPENSPEC=true
-  templates/              → User-selected technology templates
+  rl/                     → rl operational skills (uses <!-- sync: --> conditions)
+  universal/              → Software engineering principles (always synced)
+  tools/                  → User-selected technology skills (languages/, frameworks/, etc.)
 resources/commands/       → Slash commands for Claude Code (OpenSpec only)
 lib/common.sh             → Shared shell functions
 ```
@@ -50,9 +50,10 @@ openspec/                 → Specs and changes (if USE_OPENSPEC=true, work arti
 
 Every `rl loop` invocation syncs skills before launching Claude:
 
-1. **Layer 1**: Copy `resources/skills/workflow/*` → `.claude/skills/` (always, overwrite)
-2. **Layer 2**: Copy `resources/skills/workflow-openspec/*` (if USE_OPENSPEC=true)
-3. **Layer 3**: Copy `.rl/skills/*` over top (project overrides win)
+1. **Universal**: Copy `resources/skills/universal/*` → `.claude/skills/` (always)
+2. **rl**: Copy `resources/skills/rl/*` with `<!-- sync: -->` condition checks (always/openspec/dogfooding)
+3. **Overrides**: Copy `.rl/skills/*` over top (project overrides win)
+4. **Index**: Generate `SKILLS_INDEX.md` for LLM skill selection
 
 This ensures:
 - Skills are always current with the rl toolkit version

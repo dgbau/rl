@@ -31,9 +31,9 @@ zsh -n rl create.sh install.sh skills.sh lib/common.sh migrate.sh resources/core
 | Directory | Purpose |
 |-----------|---------|
 | `resources/core/` | Loop runtime (sourced at runtime, not copied) |
-| `resources/skills/workflow/` | Core skills (synced to repos on each rl loop run) |
-| `resources/skills/workflow-openspec/` | OpenSpec skills (optional) |
-| `resources/skills/templates/` | Technology templates (user-selectable) |
+| `resources/skills/rl/` | rl operational skills (synced to repos, with sync conditions) |
+| `resources/skills/universal/` | Software engineering principles (always synced) |
+| `resources/skills/tools/` | Technology skills by category (user-selectable) |
 | `resources/commands/` | Slash commands (OpenSpec only) |
 
 ## Rules

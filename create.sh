@@ -221,7 +221,7 @@ else
   # Skill templates (all types)
   if (( ${#selected_skills} == 0 )); then
     local -a available_templates=()
-    for tdir in "$RL_ROOT"/resources/skills/templates/*/; do
+    for tdir in "$RL_ROOT"/resources/skills/tools/*/*/; do
       [[ -f "$tdir/SKILL.md" ]] || continue
       local tname="${${tdir%/}:t}"
       [[ "$tname" == "_TEMPLATE" ]] && continue

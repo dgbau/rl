@@ -17,36 +17,72 @@ source "${0:A:h}/lib/common.sh"
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+# Find a tool skill by name across the two-level tree (tools/<category>/<name>/)
+# Sets REPLY to the full path, or empty if not found
+find_tool_skill() {
+  local name="$1"
+  local tools_dir="$RL_ROOT/resources/skills/tools"
+  for cat_dir in "$tools_dir"/*/; do
+    [[ -d "$cat_dir/$name" && -f "$cat_dir/$name/SKILL.md" ]] && { REPLY="$cat_dir/$name"; return 0; }
+  done
+  REPLY=""
+  return 1
+}
+
+# Extract description from a SKILL.md file
+extract_skill_desc() {
+  local file="$1"
+  local desc=""
+  desc=$(sed -n '/^description:/{s/^description: *"*//;s/"*$//;p;q;}' "$file" 2>/dev/null)
+  if [[ -z "$desc" ]]; then
+    desc=$(sed -n '/^[^#< -]/{s/\[FILL[^]]*\]//g; s/^ *//; /^$/d; p; q;}' "$file" 2>/dev/null)
+  fi
+  [[ -z "$desc" ]] && desc="(no description)"
+  print "$desc"
+}
+
+# ---------------------------------------------------------------------------
 # Subcommands
 # ---------------------------------------------------------------------------
 
 cmd_list() {
-  print -P "${C}${B}Available skill templates:${R}\n"
+  setopt local_options nullglob
 
-  for tdir in "$RL_ROOT"/resources/skills/templates/*/; do
-    [[ -f "$tdir/SKILL.md" ]] || continue
-    local name="${${tdir%/}:t}"
-    [[ "$name" == "_TEMPLATE" ]] && continue
+  print -P "${C}${B}Available skills by category:${R}"
 
-    # Extract description from YAML frontmatter or first content line
-    local desc=$(sed -n '/^description:/{s/^description: *"*//;s/"*$//;p;q;}' "$tdir/SKILL.md" 2>/dev/null)
-    if [[ -z "$desc" ]]; then
-      desc=$(sed -n '/^[^#< -]/{s/\[FILL[^]]*\]//g; s/^ *//; /^$/d; p; q;}' "$tdir/SKILL.md" 2>/dev/null)
-    fi
-    [[ -z "$desc" ]] && desc="(no description)"
+  local tools_dir="$RL_ROOT/resources/skills/tools"
+  for cat_dir in "$tools_dir"/*/; do
+    [[ -d "$cat_dir" ]] || continue
+    local cat_name="${cat_dir:t}"
 
-    # Check if installed in current repo
-    local installed=""
-    if [[ -n "$REPO_ROOT" && -d "$REPO_ROOT/.claude/skills/$name" ]]; then
-      installed=" ${G}(installed)${R}"
-    fi
+    # Collect skills in this category
+    local -a skills_in_cat=()
+    for tdir in "$cat_dir"/*/; do
+      [[ -f "$tdir/SKILL.md" ]] || continue
+      skills_in_cat+=("$tdir")
+    done
+    (( ${#skills_in_cat} )) || continue
 
-    print -P "  ${Y}$name${R}${installed}"
-    print -P "    ${D}$desc${R}"
+    print -P "\n  ${C}${B}$cat_name${R}"
+    for tdir in "${skills_in_cat[@]}"; do
+      local name="${tdir:t}"
+      local desc=$(extract_skill_desc "$tdir/SKILL.md")
+
+      local installed=""
+      if [[ -n "$REPO_ROOT" && -d "$REPO_ROOT/.claude/skills/$name" ]]; then
+        installed=" ${G}(installed)${R}"
+      fi
+
+      print -P "    ${Y}$name${R}${installed}"
+      print -P "      ${D}$desc${R}"
+    done
   done
 
   print ""
-  print -P "${D}Use 'rl skills add <name>' to install a template.${R}"
+  print -P "${D}Use 'rl skills add <name>' to install a skill.${R}"
 }
 
 cmd_add() {
@@ -62,12 +98,12 @@ cmd_add() {
     exit 1
   fi
 
-  local src="$RL_ROOT/resources/skills/templates/$name"
-  if [[ ! -d "$src" ]]; then
-    print -P "${ERR}${B}Error:${R} Template not found: $name"
-    print -P "Run 'rl skills list' to see available templates."
+  if ! find_tool_skill "$name"; then
+    print -P "${ERR}${B}Error:${R} Skill not found: $name"
+    print -P "Run 'rl skills list' to see available skills."
     exit 1
   fi
+  local src="$REPLY"
 
   # Install to .rl/skills/ (project override) so it persists across skill syncs
   local dst="$REPO_ROOT/.rl/skills/$name"
@@ -92,16 +128,13 @@ cmd_sync() {
 
   local count=0
 
-  # Workflow skills (always)
-  for skill_dir in "$skills_src/workflow"/*/; do
-    [[ -d "$skill_dir" ]] || continue
-    local skill_name="${skill_dir:t}"
-    mkdir -p "$REPO_ROOT/.claude/skills/$skill_name"
-    cp "$skill_dir/SKILL.md" "$REPO_ROOT/.claude/skills/$skill_name/"
-    count=$((count + 1))
-  done
+  # Detect if we're developing the rl toolkit itself
+  local is_rl_toolkit=false
+  if [[ -f "$REPO_ROOT/resources/core/loop.sh" && -f "$REPO_ROOT/lib/common.sh" ]]; then
+    is_rl_toolkit=true
+  fi
 
-  # OpenSpec skills (if configured)
+  # Read config
   local use_openspec=false
   if [[ -f "$REPO_ROOT/.rl/config" ]]; then
     ( set +u; source "$REPO_ROOT/.rl/config"; print "${USE_OPENSPEC:-false}" ) | read use_openspec
@@ -109,15 +142,45 @@ cmd_sync() {
     ( set +u; source "$REPO_ROOT/.ralphrc"; print "${USE_OPENSPEC:-false}" ) | read use_openspec
   fi
 
-  if [[ "$use_openspec" == "true" && -d "$skills_src/workflow-openspec" ]]; then
-    for skill_dir in "$skills_src/workflow-openspec"/*/; do
-      [[ -d "$skill_dir" ]] || continue
-      local skill_name="${skill_dir:t}"
-      mkdir -p "$REPO_ROOT/.claude/skills/$skill_name"
-      cp "$skill_dir/SKILL.md" "$REPO_ROOT/.claude/skills/$skill_name/"
-      count=$((count + 1))
-    done
-  fi
+  # --- Universal skills (always) ---
+  for skill_dir in "$skills_src/universal"/*/; do
+    [[ -d "$skill_dir" ]] || continue
+    local skill_name="${skill_dir:t}"
+    mkdir -p "$REPO_ROOT/.claude/skills/$skill_name"
+    cp "$skill_dir/SKILL.md" "$REPO_ROOT/.claude/skills/$skill_name/"
+    count=$((count + 1))
+  done
+
+  # --- rl skills (check sync condition per skill) ---
+  # Skills in rl/ use <!-- sync: CONDITION --> metadata:
+  #   (no marker or "always") = always synced
+  #   "openspec"              = only when USE_OPENSPEC=true
+  #   "dogfooding"            = only when developing rl itself
+  for skill_dir in "$skills_src/rl"/*/; do
+    [[ -d "$skill_dir" ]] || continue
+    local skill_name="${skill_dir:t}"
+
+    # Read sync condition from SKILL.md
+    local sync_cond="always"
+    if [[ -f "$skill_dir/SKILL.md" ]]; then
+      local found_cond=$(sed -n 's/.*<!-- *sync: *\([a-z]*\) *-->.*/\1/p' "$skill_dir/SKILL.md" 2>/dev/null | head -1)
+      [[ -n "$found_cond" ]] && sync_cond="$found_cond"
+    fi
+
+    # Check condition
+    case "$sync_cond" in
+      openspec)
+        [[ "$use_openspec" != "true" ]] && continue
+        ;;
+      dogfooding)
+        [[ "$is_rl_toolkit" != "true" ]] && continue
+        ;;
+    esac
+
+    mkdir -p "$REPO_ROOT/.claude/skills/$skill_name"
+    cp "$skill_dir/SKILL.md" "$REPO_ROOT/.claude/skills/$skill_name/"
+    count=$((count + 1))
+  done
 
   # Apply project overrides last (highest precedence)
   local override_count=0
@@ -131,7 +194,67 @@ cmd_sync() {
     done
   fi
 
+  # Generate .gitignore for synced skills — project-specific skills stay committable
+  {
+    echo "# Auto-generated by rl skills sync — do not edit"
+    echo "# Synced skills are managed by rl and should not be committed."
+    echo "# Project-specific skills (not listed here) SHOULD be committed."
+    echo ""
+    echo "SKILLS_INDEX.md"
+    # Universal
+    for skill_dir in "$skills_src/universal"/*/; do
+      [[ -d "$skill_dir" ]] || continue
+      echo "${skill_dir:t}/"
+    done
+    # rl (same condition logic as sync)
+    for skill_dir in "$skills_src/rl"/*/; do
+      [[ -d "$skill_dir" ]] || continue
+      local sync_cond="always"
+      if [[ -f "$skill_dir/SKILL.md" ]]; then
+        local found_cond
+        found_cond=$(sed -n 's/.*<!-- *sync: *\([a-z]*\) *-->.*/\1/p' "$skill_dir/SKILL.md" 2>/dev/null | head -1)
+        [[ -n "$found_cond" ]] && sync_cond="$found_cond"
+      fi
+      case "$sync_cond" in
+        openspec)   [[ "$use_openspec" != "true" ]] && continue ;;
+        dogfooding) [[ "$is_rl_toolkit" != "true" ]] && continue ;;
+      esac
+      echo "${skill_dir:t}/"
+    done
+  } > "$REPO_ROOT/.claude/skills/.gitignore"
+
+  # Generate SKILLS_INDEX.md — machine-readable index for LLM skill selection
+  # The bootstrapper and build agent read this to match skills to tickets
+  {
+    echo "# Available Skills"
+    echo ""
+    echo "This index is auto-generated by \`rl skills sync\`. Read this file to understand"
+    echo "which skills are available and when to use each one. When creating tickets,"
+    echo "list relevant skill names in the ticket's \`## Skills\` section."
+    echo ""
+    for sdir in "$REPO_ROOT/.claude/skills"/*/; do
+      [[ -f "$sdir/SKILL.md" ]] || continue
+      local sname="${sdir:t}"
+      # Extract description from frontmatter or first meaningful line
+      local sdesc=""
+      sdesc=$(sed -n '/^description:/{s/^description: *"*//;s/"*$//;p;q;}' "$sdir/SKILL.md" 2>/dev/null)
+      if [[ -z "$sdesc" ]]; then
+        sdesc=$(sed -n '/^[^#<@ -]/{s/\[FILL[^]]*\]//g; s/^ *//; /^$/d; p; q;}' "$sdir/SKILL.md" 2>/dev/null)
+      fi
+      # Extract tags if present
+      local stags=""
+      stags=$(sed -n 's/.*<!-- *tags: *\(.*\) *-->.*/\1/p' "$sdir/SKILL.md" 2>/dev/null | head -1)
+      [[ -z "$sdesc" ]] && sdesc="(no description)"
+      if [[ -n "$stags" ]]; then
+        echo "- **$sname** [$stags] — $sdesc"
+      else
+        echo "- **$sname** — $sdesc"
+      fi
+    done
+  } > "$REPO_ROOT/.claude/skills/SKILLS_INDEX.md"
+
   print -P "${G}${B}Synced:${R} $count skills from source, $override_count project overrides applied."
+  print -P "${D}Updated .claude/skills/.gitignore and SKILLS_INDEX.md${R}"
 }
 
 cmd_override() {
@@ -146,14 +269,15 @@ cmd_override() {
     exit 1
   fi
 
-  # Find the skill in the source
+  # Find the skill in rl/ or universal/
   local src=""
-  if [[ -d "$RL_ROOT/resources/skills/workflow/$name" ]]; then
-    src="$RL_ROOT/resources/skills/workflow/$name"
-  elif [[ -d "$RL_ROOT/resources/skills/workflow-openspec/$name" ]]; then
-    src="$RL_ROOT/resources/skills/workflow-openspec/$name"
+  if [[ -d "$RL_ROOT/resources/skills/rl/$name" ]]; then
+    src="$RL_ROOT/resources/skills/rl/$name"
+  elif [[ -d "$RL_ROOT/resources/skills/universal/$name" ]]; then
+    src="$RL_ROOT/resources/skills/universal/$name"
   else
     print -P "${ERR}${B}Error:${R} Skill not found in rl source: $name"
+    print -P "${D}Only rl and universal skills can be overridden. Tool skills are added via 'rl skills add'.${R}"
     exit 1
   fi
 
@@ -177,7 +301,7 @@ cmd_installed() {
   fi
 
   # Collect skills into category buckets
-  local -a workflow_skills=() universal_skills=() language_skills=() stack_skills=() template_skills=() openspec_skills=() custom_skills=()
+  local -a rl_skills=() universal_skills=() tools_skills=() custom_skills=()
 
   for sdir in "$skills_dir"/*/; do
     [[ -f "$sdir/SKILL.md" ]] || continue
@@ -189,62 +313,44 @@ cmd_installed() {
 
     # Fall back to directory-based detection
     if [[ -z "$file_cat" ]]; then
-      if [[ -d "$RL_ROOT/resources/skills/workflow/$name" ]]; then
-        file_cat="workflow"
-      elif [[ -d "$RL_ROOT/resources/skills/workflow-openspec/$name" ]]; then
-        file_cat="openspec"
-      elif [[ -d "$RL_ROOT/resources/skills/templates/$name" ]]; then
-        file_cat="template"
+      if [[ -d "$RL_ROOT/resources/skills/rl/$name" ]]; then
+        file_cat="rl"
+      elif [[ -d "$RL_ROOT/resources/skills/universal/$name" ]]; then
+        file_cat="universal"
+      elif find_tool_skill "$name"; then
+        file_cat="tools"
       else
         file_cat="custom"
       fi
     fi
 
     case "$file_cat" in
-      workflow)  workflow_skills+=("$name") ;;
+      rl)        rl_skills+=("$name") ;;
       universal) universal_skills+=("$name") ;;
-      language)  language_skills+=("$name") ;;
-      stack)     stack_skills+=("$name") ;;
-      template)  template_skills+=("$name") ;;
-      openspec)  openspec_skills+=("$name") ;;
+      tools)     tools_skills+=("$name") ;;
       *)         custom_skills+=("$name") ;;
     esac
   done
 
   print -P "${C}${B}Installed skills:${R}"
 
-  if (( ${#workflow_skills} )); then
-    print -P "\n  ${G}${B}Workflow${R} ${D}(layer 0 — how to operate)${R}"
-    for s in "${workflow_skills[@]}"; do print -P "    ${G}$s${R}"; done
+  if (( ${#rl_skills} )); then
+    print -P "\n  ${G}${B}rl${R} ${D}(Ralph Loop operations)${R}"
+    for s in "${rl_skills[@]}"; do print -P "    ${G}$s${R}"; done
   fi
 
   if (( ${#universal_skills} )); then
-    print -P "\n  ${G}${B}Universal${R} ${D}(layer 1 — principles)${R}"
+    print -P "\n  ${G}${B}Universal${R} ${D}(software engineering principles)${R}"
     for s in "${universal_skills[@]}"; do print -P "    ${G}$s${R}"; done
   fi
 
-  if (( ${#language_skills} )); then
-    print -P "\n  ${Y}${B}Language${R} ${D}(layer 2 — language conventions)${R}"
-    for s in "${language_skills[@]}"; do print -P "    ${Y}$s${R}"; done
-  fi
-
-  if (( ${#stack_skills} )); then
-    print -P "\n  ${Y}${B}Stack${R} ${D}(layer 3 — library combinations)${R}"
-    for s in "${stack_skills[@]}"; do print -P "    ${Y}$s${R}"; done
-  fi
-
-  if (( ${#template_skills} )); then
-    print -P "\n  ${Y}${B}Technology${R} ${D}(layer 4 — individual tech)${R}"
-    for s in "${template_skills[@]}"; do print -P "    ${Y}$s${R}"; done
-  fi
-
-  if (( ${#openspec_skills} )); then
-    print -P "\n  ${C}${B}OpenSpec${R} ${D}(spec-driven workflow)${R}"
-    for s in "${openspec_skills[@]}"; do print -P "    ${C}$s${R}"; done
+  if (( ${#tools_skills} )); then
+    print -P "\n  ${Y}${B}Tools${R} ${D}(technology-specific)${R}"
+    for s in "${tools_skills[@]}"; do print -P "    ${Y}$s${R}"; done
   fi
 
   if (( ${#custom_skills} )); then
-    print -P "\n  ${B}Custom${R} ${D}(layer 5 — project-specific)${R}"
+    print -P "\n  ${B}Custom${R} ${D}(project-specific)${R}"
     for s in "${custom_skills[@]}"; do print -P "    $s"; done
   fi
 
@@ -270,7 +376,8 @@ cmd_new() {
 
   validate_slug "$name" || exit 1
 
-  local template_src="$RL_ROOT/resources/skills/templates/_TEMPLATE.md"
+  # _TEMPLATE.md lives in domain/ directory
+  local template_src="$RL_ROOT/resources/skills/tools/_TEMPLATE.md"
   if [[ ! -f "$template_src" ]]; then
     print -P "${ERR}${B}Error:${R} Meta-template not found at $template_src"
     exit 1
@@ -278,8 +385,23 @@ cmd_new() {
 
   local dst_dir
   if [[ "$global" == "true" ]]; then
-    dst_dir="$RL_ROOT/resources/skills/templates/$name"
-    print -P "Creating ${C}global${R} skill template: $name"
+    # Pick a category
+    local category=""
+    print -P "Available categories:"
+    local -a cats=()
+    for cdir in "$RL_ROOT"/resources/skills/tools/*/; do
+      [[ -d "$cdir" ]] || continue
+      cats+=("${cdir:t}")
+      print -P "  ${cdir:t}"
+    done
+    print -n "  Category: "
+    read -r category
+    if [[ -z "$category" ]] || ! [[ -d "$RL_ROOT/resources/skills/tools/$category" ]]; then
+      print -P "${ERR}${B}Error:${R} Invalid category: $category"
+      exit 1
+    fi
+    dst_dir="$RL_ROOT/resources/skills/tools/$category/$name"
+    print -P "Creating ${C}global${R} skill: $category/$name"
   else
     if [[ -z "$REPO_ROOT" ]]; then
       print -P "${ERR}${B}Error:${R} Not inside a git repository. Use --global for reusable templates."
@@ -333,7 +455,7 @@ cmd_add_openspec() {
   local skills_dir="$REPO_ROOT/.claude/skills"
   mkdir -p "$skills_dir"
 
-  for skill_dir in "$RL_ROOT"/resources/skills/workflow-openspec/*/; do
+  for skill_dir in "$RL_ROOT"/resources/skills/rl/openspec-*/; do
     [[ -d "$skill_dir" ]] || continue
     local skill_name="${${skill_dir%/}:t}"
     copy_dir_safe "$skill_dir" "$skills_dir/$skill_name"
