@@ -1,0 +1,191 @@
+#!/usr/bin/env zsh
+# release.sh — Create a release with auto-generated changelog
+# Usage:
+#   rl release              # auto-detect version from commits
+#   rl release v0.2.0       # force a specific version
+#   rl release --dry-run    # show what would happen
+
+set -euo pipefail
+source "${0:A:h}/lib/common.sh"
+
+DRY_RUN=false
+FORCED_VERSION=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run) DRY_RUN=true; shift ;;
+    v*)        FORCED_VERSION="$1"; shift ;;
+    *)         shift ;;
+  esac
+done
+
+# Must be in the rl repo
+cd "$RL_ROOT"
+
+# ---------------------------------------------------------------------------
+# Determine current and next version
+# ---------------------------------------------------------------------------
+LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+if [[ -n "$FORCED_VERSION" ]]; then
+  NEXT_VERSION="$FORCED_VERSION"
+elif [[ -z "$LATEST_TAG" ]]; then
+  NEXT_VERSION="v0.1.0"
+else
+  # Parse commits since last tag to determine bump type
+  local has_breaking=false has_feat=false
+  while IFS= read -r msg; do
+    [[ "$msg" == *"BREAKING CHANGE"* ]] && has_breaking=true
+    [[ "$msg" == feat* ]] && has_feat=true
+  done < <(git log "${LATEST_TAG}..HEAD" --pretty=format:"%s" 2>/dev/null)
+
+  # Parse current version
+  local major minor patch
+  major=${LATEST_TAG#v}; major=${major%%.*}
+  minor=${LATEST_TAG#*.}; minor=${minor%%.*}
+  patch=${LATEST_TAG##*.}
+
+  if $has_breaking; then
+    NEXT_VERSION="v$((major + 1)).0.0"
+  elif $has_feat; then
+    NEXT_VERSION="v${major}.$((minor + 1)).0"
+  else
+    NEXT_VERSION="v${major}.${minor}.$((patch + 1))"
+  fi
+fi
+
+RANGE="${LATEST_TAG:+${LATEST_TAG}..HEAD}"
+[[ -z "$RANGE" ]] && RANGE="HEAD"
+
+print -P "${C}${B}rl release${R}"
+print ""
+print -P "  ${D}Current:${R}  ${LATEST_TAG:-none}"
+print -P "  ${D}Next:${R}     ${NEXT_VERSION}"
+print ""
+
+# ---------------------------------------------------------------------------
+# Generate changelog entries from conventional commits
+# ---------------------------------------------------------------------------
+generate_changelog() {
+  local range="$1"
+
+  local -a features=() fixes=() refactors=() docs=() chores=() others=()
+
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    case "$line" in
+      feat*)     features+=("$line") ;;
+      fix*)      fixes+=("$line") ;;
+      refactor*) refactors+=("$line") ;;
+      docs*)     docs+=("$line") ;;
+      chore*)    chores+=("$line") ;;
+      *)         others+=("$line") ;;
+    esac
+  done < <(git log "$range" --pretty=format:"%s" 2>/dev/null)
+
+  echo "## ${NEXT_VERSION} ($(date '+%Y-%m-%d'))"
+  echo ""
+
+  if (( ${#features} )); then
+    echo "### Features"
+    for c in "${features[@]}"; do echo "- ${c#*: }"; done
+    echo ""
+  fi
+  if (( ${#fixes} )); then
+    echo "### Bug Fixes"
+    for c in "${fixes[@]}"; do echo "- ${c#*: }"; done
+    echo ""
+  fi
+  if (( ${#refactors} )); then
+    echo "### Refactoring"
+    for c in "${refactors[@]}"; do echo "- ${c#*: }"; done
+    echo ""
+  fi
+  if (( ${#docs} )); then
+    echo "### Documentation"
+    for c in "${docs[@]}"; do echo "- ${c#*: }"; done
+    echo ""
+  fi
+  if (( ${#chores} )); then
+    echo "### Maintenance"
+    for c in "${chores[@]}"; do echo "- ${c#*: }"; done
+    echo ""
+  fi
+  if (( ${#others} )); then
+    echo "### Other"
+    for c in "${others[@]}"; do echo "- $c"; done
+    echo ""
+  fi
+}
+
+CHANGELOG_ENTRY=$(generate_changelog "$RANGE")
+
+print -P "${B}Changelog:${R}"
+echo "$CHANGELOG_ENTRY"
+echo ""
+
+if [[ "$DRY_RUN" == "true" ]]; then
+  print -P "${Y}Dry run — no changes made.${R}"
+  exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# Confirm
+# ---------------------------------------------------------------------------
+ask "Create release ${NEXT_VERSION}? [Y/n]"
+read -r ans
+if [[ ! "${ans:-Y}" =~ ^[Yy] ]]; then
+  print "Aborted."
+  exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# Update CHANGELOG.md
+# ---------------------------------------------------------------------------
+if [[ -f CHANGELOG.md ]]; then
+  # Prepend new entry after the header
+  {
+    head -2 CHANGELOG.md
+    echo ""
+    echo "$CHANGELOG_ENTRY"
+    tail -n +3 CHANGELOG.md
+  } > CHANGELOG.md.tmp
+  mv CHANGELOG.md.tmp CHANGELOG.md
+else
+  {
+    echo "# Changelog"
+    echo ""
+    echo "$CHANGELOG_ENTRY"
+  } > CHANGELOG.md
+fi
+
+git add CHANGELOG.md
+git commit -m "chore(release): ${NEXT_VERSION}"
+
+# ---------------------------------------------------------------------------
+# Tag and push
+# ---------------------------------------------------------------------------
+git tag -a "$NEXT_VERSION" -m "Release ${NEXT_VERSION}"
+
+# Update stable tag (for dogfooding safety)
+git tag -f stable "$NEXT_VERSION"
+
+git push
+git push --tags --force  # --force needed for moving stable tag
+
+# ---------------------------------------------------------------------------
+# GitHub Release
+# ---------------------------------------------------------------------------
+if (( $+commands[gh] )); then
+  print -P "${D}Creating GitHub release...${R}"
+  gh release create "$NEXT_VERSION" \
+    --title "$NEXT_VERSION" \
+    --notes "$CHANGELOG_ENTRY" \
+    2>/dev/null || print -P "${Y}GitHub release creation failed (may need auth).${R}"
+fi
+
+print ""
+print -P "${G}${B}Released ${NEXT_VERSION}!${R}"
+print -P "  ${D}Tag:${R}       $NEXT_VERSION"
+print -P "  ${D}Stable:${R}    stable -> $NEXT_VERSION"
+print -P "  ${D}Changelog:${R} CHANGELOG.md updated"

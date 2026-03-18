@@ -30,11 +30,19 @@ case "${1:-}" in
     shift
     exec "$RL_DIR/migrate.sh" "$@"
     ;;
+  release)
+    shift
+    exec "$RL_DIR/release.sh" "$@"
+    ;;
   update)
     shift
     echo "Updating rl toolkit..."
     (cd "$RL_DIR" && git pull --ff-only)
     echo "rl updated to $(cd "$RL_DIR" && git log --oneline -1)"
+    ;;
+  version|-v|--version)
+    local ver=$(cd "$RL_DIR" && git describe --tags --always 2>/dev/null || echo "dev")
+    print "rl $ver"
     ;;
   -h|--help|"")
     print "Usage: rl <command> [args...]"
@@ -45,7 +53,9 @@ case "${1:-}" in
     print "  loop [mode]     Run the Ralph Loop (interview, bootstrap, build, amend, review, e2e)"
     print "  skills          Manage skill templates (list, add, new)"
     print "  migrate         Migrate a repo from ralph/ to .rl/ model"
+    print "  release         Create a release (tag, changelog, GitHub release)"
     print "  update          Update the rl toolkit (git pull)"
+    print "  version         Show rl version"
     print ""
     print "Run 'rl <command> --help' for details."
     ;;
