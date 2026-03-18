@@ -14,7 +14,7 @@ The **Ralph Loop** — [originated by Geoffrey Huntley](https://ghuntley.com/loo
 
 - **Any stack** — TypeScript, Python, Go, Rust, JVM, C/C++, Nx monorepos
 - **Hybrid ticketing** — [`tk`](https://github.com/wedow/ticket) stores tickets as markdown files in your repo (git-native, no external service), with dependency tracking and priority ordering
-- **Optional spec-driven development** — [`OpenSpec`](https://github.com/fission-ai/openspec) maintains living system documentation that evolves with your code. Specs become the source of truth for what the system does, not just what was planned
+- **Spec-driven development by default** — [`OpenSpec`](https://github.com/fission-ai/openspec) maintains living system documentation that evolves with your code. Specs become the source of truth for what the system does, not just what was planned. Enabled by default; disable with `--no-openspec` or `USE_OPENSPEC=false`
 - **Skills as shared knowledge** — reusable agent instructions synced from a single source of truth, with per-project overrides
 - **Human-in-the-loop safety** — Ralph creates draft PRs but **never merges or closes them.** A human always performs the final merge
 
@@ -106,7 +106,7 @@ If you prefer not to use `setup.sh`:
 | [tk](https://github.com/wedow/ticket) | `brew tap wedow/tools && brew install ticket` | Git-native ticket management |
 | [gh](https://cli.github.com/) | `brew install gh && gh auth login` | GitHub integration |
 | [jq](https://jqlang.github.io/jq/) | `brew install jq` | JSON processing |
-| [OpenSpec](https://github.com/fission-ai/openspec) (optional) | `npm install -g @fission-ai/openspec` | Spec-driven development |
+| [OpenSpec](https://github.com/fission-ai/openspec) | `npm install -g @fission-ai/openspec` | Spec-driven development (enabled by default) |
 
 ### Clone and run setup
 
@@ -250,7 +250,7 @@ rl skills add tailwind            # Copies to .rl/skills/tailwind/
 | `CLAUDE_MODEL` | `RALPH_MODEL` | `opus` | Claude model |
 | `MAX_ITERATIONS` | `RALPH_MAX_ITERATIONS` | `25` | Max auto iterations |
 | `REVIEW_WAIT` | `RALPH_REVIEW_WAIT` | `90` | Seconds between review cycles |
-| `USE_OPENSPEC` | — | `false` | Enable spec-driven development |
+| `USE_OPENSPEC` | — | `true` | Enable spec-driven development |
 | `BACKPRESSURE_TIMEOUT` | `RALPH_BACKPRESSURE_TIMEOUT` | `600` | Backpressure timeout (seconds) |
 | `E2E_TIMEOUT` | `RALPH_E2E_TIMEOUT` | `300` | E2E timeout (seconds) |
 
@@ -330,9 +330,9 @@ The build agent picks the highest-priority unblocked ticket via `tk ready`.
 
 ---
 
-## OpenSpec integration (optional)
+## OpenSpec integration (enabled by default)
 
-When `USE_OPENSPEC=true`, [OpenSpec](https://github.com/fission-ai/openspec) maintains living system documentation:
+When `USE_OPENSPEC=true` (the default), [OpenSpec](https://github.com/fission-ai/openspec) maintains living system documentation:
 
 1. **Interview** creates a change with proposal, design, and delta specs
 2. **Bootstrap** links the epic ticket via `external-ref: openspec:<id>`

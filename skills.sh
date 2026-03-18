@@ -137,9 +137,9 @@ cmd_sync() {
   # Read config
   local use_openspec=false
   if [[ -f "$REPO_ROOT/.rl/config" ]]; then
-    ( set +u; source "$REPO_ROOT/.rl/config"; print "${USE_OPENSPEC:-false}" ) | read use_openspec
+    ( set +u; source "$REPO_ROOT/.rl/config"; print "${USE_OPENSPEC:-true}" ) | read use_openspec
   elif [[ -f "$REPO_ROOT/.ralphrc" ]]; then
-    ( set +u; source "$REPO_ROOT/.ralphrc"; print "${USE_OPENSPEC:-false}" ) | read use_openspec
+    ( set +u; source "$REPO_ROOT/.ralphrc"; print "${USE_OPENSPEC:-true}" ) | read use_openspec
   fi
 
   # --- Universal skills (always) ---

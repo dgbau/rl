@@ -27,6 +27,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --use-openspec)
       USE_OPENSPEC=true
+      EXPLICIT_OPENSPEC=true
       shift
       ;;
     --no-openspec)
@@ -45,7 +46,7 @@ while [[ $# -gt 0 ]]; do
       print "Usage: rl install [directory] [options]"
       print ""
       print "Options:"
-      print "  --use-openspec    Enable OpenSpec integration"
+      print "  --use-openspec    Enable OpenSpec integration (default)"
       print "  --no-openspec     Disable OpenSpec integration"
       print "  --skills LIST     Comma-separated skill templates to install"
       print "  --no-prompt       Skip interactive prompts (use defaults/flags)"
@@ -120,7 +121,7 @@ if [[ "$NO_PROMPT" != "true" ]]; then
       print -P "${D}OpenSpec is already installed as a dependency.${R}"
       USE_OPENSPEC=true
     else
-      if prompt_yn "Use OpenSpec for spec-driven development?" "y"; then
+      if prompt_yn "Use OpenSpec for spec-driven development? (recommended)" "y"; then
         USE_OPENSPEC=true
       else
         USE_OPENSPEC=false
@@ -209,13 +210,13 @@ if [[ "$NO_PROMPT" != "true" ]]; then
   fi
 fi
 
-USE_OPENSPEC="${USE_OPENSPEC:-false}"
+USE_OPENSPEC="${USE_OPENSPEC:-true}"
 
 # ---------------------------------------------------------------------------
 # Verify OpenSpec is available (global tool, not a repo dependency)
 # ---------------------------------------------------------------------------
 if [[ "$USE_OPENSPEC" == "true" ]]; then
-  if (( $+commands[openspec] )) || (( $+commands[npx] )) && npx openspec --version &>/dev/null; then
+  if (( $+commands[openspec] )) || { (( $+commands[npx] )) && npx openspec --version &>/dev/null 2>&1; }; then
     # Initialize OpenSpec in the repo if not already done
     if [[ ! -d "$TARGET_DIR/openspec" ]]; then
       print ""
@@ -224,9 +225,18 @@ if [[ "$USE_OPENSPEC" == "true" ]]; then
     fi
   else
     print ""
-    print -P "${Y}Warning:${R} OpenSpec CLI not found."
-    print -P "${D}Install globally: npm install -g @fission-ai/openspec${R}"
-    print -P "${D}Continuing with USE_OPENSPEC=true in config — install OpenSpec before running rl loop.${R}"
+    print -P "${Y}OpenSpec CLI not found.${R}"
+    print -P "${D}OpenSpec is enabled by default for spec-driven development.${R}"
+    print -P "${D}Install: npm install -g @fission-ai/openspec${R}"
+    print -P ""
+    # If user explicitly requested OpenSpec, keep it on (they'll install later)
+    # Otherwise fall back to false
+    if [[ "${EXPLICIT_OPENSPEC:-}" != "true" ]]; then
+      print -P "${D}Disabling OpenSpec for now. Enable later: set USE_OPENSPEC=true in .rl/config${R}"
+      USE_OPENSPEC=false
+    else
+      print -P "${D}Keeping USE_OPENSPEC=true as requested — install OpenSpec before running rl loop.${R}"
+    fi
   fi
 fi
 

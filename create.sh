@@ -29,7 +29,7 @@
 #   --strict-ts         Enable TypeScript strict mode (default: true for Nx)
 #   --no-strict-ts      Disable TypeScript strict mode
 #   --openspec          Enable OpenSpec spec-driven development
-#   --no-openspec       Disable OpenSpec (default)
+#   --no-openspec       Disable OpenSpec (enabled by default)
 #   --github            Create GitHub repository
 #   --no-github         Skip GitHub repo creation (default)
 #   --no-prompt         Skip all interactive prompts
@@ -48,7 +48,7 @@ local nx_preset=""
 local app_name=""
 local use_tailwind=""        # "" = unset (will use smart default or prompt)
 local use_ts_strict=true
-local use_openspec=false
+local use_openspec=true
 local create_github=false
 local -a selected_skills=()
 
@@ -69,7 +69,7 @@ while [[ $# -gt 0 ]]; do
     --strict-ts)     use_ts_strict=true; shift ;;
     --no-strict-ts)  use_ts_strict=false; shift ;;
     --openspec)      use_openspec=true; shift ;;
-    --no-openspec)   use_openspec=false; shift ;;
+    --no-openspec)   use_openspec=false; shift ;;  # opt out of default
     --github)        create_github=true; shift ;;
     --no-github)     create_github=false; shift ;;
     -h|--help)
@@ -85,8 +85,8 @@ while [[ $# -gt 0 ]]; do
       print "  --no-tailwind       Skip Tailwind installation"
       print "  --strict-ts         Enable TypeScript strict mode (default)"
       print "  --no-strict-ts      Disable TypeScript strict mode"
-      print "  --openspec          Enable OpenSpec spec-driven development"
-      print "  --no-openspec       Disable OpenSpec (default)"
+      print "  --openspec          Enable OpenSpec spec-driven development (default)"
+      print "  --no-openspec       Disable OpenSpec"
       print "  --github            Create GitHub repository"
       print "  --no-github         Skip GitHub repo (default)"
       print "  --no-prompt         Skip all interactive prompts"
@@ -238,8 +238,8 @@ else
 
   # OpenSpec (all types)
   print ""
-  if prompt_yn "Use OpenSpec for spec-driven development?" "n"; then
-    use_openspec=true
+  if ! prompt_yn "Use OpenSpec for spec-driven development?" "y"; then
+    use_openspec=false
   fi
 
   # GitHub repo

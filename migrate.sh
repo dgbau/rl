@@ -75,7 +75,7 @@ elif [[ "$SCENARIO" == "custom" ]]; then
   # Try to extract config from ralph/loop.sh if it exists
   local extracted_backpressure=""
   local extracted_base_branch="$BASE_BRANCH"
-  local extracted_openspec="false"
+  local extracted_openspec="true"
   if [[ -f "$TARGET_DIR/ralph/loop.sh" ]]; then
     # Look for hardcoded backpressure commands
     # Extract actual command, not echo/log lines — look for array or variable assignment patterns

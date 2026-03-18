@@ -1,6 +1,6 @@
 # Ralph Loop -- Autonomous AI Development
 
-The Ralph Loop spawns fresh [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) instances, each performing a single task, committing, and exiting. State persists via git-tracked tickets ([`tk`](https://github.com/wedow/ticket)), skills, and lessons. Optionally integrates with [OpenSpec](https://github.com/fission-ai/openspec) for spec-driven development.
+The Ralph Loop spawns fresh [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) instances, each performing a single task, committing, and exiting. State persists via git-tracked tickets ([`tk`](https://github.com/wedow/ticket)), skills, and lessons. Integrates with [OpenSpec](https://github.com/fission-ai/openspec) for spec-driven development by default (disable with `USE_OPENSPEC=false`).
 
 Ralph **never** merges or closes PRs. A human always performs the final merge.
 
@@ -69,7 +69,7 @@ The Ralph Loop (conceived by [Geoffrey Huntley](https://ghuntley.com/stdlib), na
 - **[`tk`](https://github.com/wedow/ticket)** (ticket CLI): `brew tap wedow/tools && brew install ticket`
 - **[GitHub CLI](https://cli.github.com/)** (`gh`): `brew install gh && gh auth login`
 - **[`jq`](https://jqlang.github.io/jq/)**: `brew install jq`
-- **[OpenSpec](https://github.com/fission-ai/openspec)** (optional): `npm add -D @fission-ai/openspec`
+- **[OpenSpec](https://github.com/fission-ai/openspec)**: `npm install -g @fission-ai/openspec` (enabled by default; disable with `USE_OPENSPEC=false`)
 
 ---
 
@@ -86,7 +86,7 @@ The loop reads `.rl/config` from the project root. Environment variables overrid
 | `REVIEW_WAIT` | `RALPH_REVIEW_WAIT` | `90` | Seconds between review iterations |
 | `BACKPRESSURE_CMD` | -- | `npx nx affected -t lint test build` | Quality gate command |
 | `E2E_CMD` | -- | *(none)* | E2E test command (used by `run-e2e.sh`) |
-| `USE_OPENSPEC` | -- | `false` | Enable OpenSpec spec-driven development |
+| `USE_OPENSPEC` | -- | `true` | Enable OpenSpec spec-driven development |
 | `USES_TAILWIND` | -- | -- | Agent context hint (styling) |
 | `USES_TYPESCRIPT_STRICT` | -- | -- | Agent context hint (strict TS) |
 
@@ -97,7 +97,7 @@ PROJECT_NAME="myapp"
 BASE_BRANCH="develop"
 BACKPRESSURE_CMD="npm run lint && npm test && npm run build"
 E2E_CMD="npx playwright test"
-USE_OPENSPEC=false
+USE_OPENSPEC=true
 ```
 
 ---
@@ -237,7 +237,7 @@ Each ticket has YAML frontmatter (`id`, `status`, `type`, `priority`, `parent`, 
 
 ---
 
-## OpenSpec Integration (Optional)
+## OpenSpec Integration (Enabled by Default)
 
 When `USE_OPENSPEC=true`, [OpenSpec](https://github.com/fission-ai/openspec) maintains living system documentation through a proposal -> implement -> archive lifecycle.
 

@@ -181,11 +181,16 @@ fi
 print ""
 
 # ---------------------------------------------------------------------------
-# 3. Optional dependencies
+# 3. OpenSpec (enabled by default)
 # ---------------------------------------------------------------------------
-print "${B}Checking optional dependencies...${R}"
+print "${B}Checking OpenSpec...${R}"
 
-check_or_install openspec "OpenSpec" "npm install -g @fission-ai/openspec" optional
+if ! check_or_install openspec "OpenSpec" "npm install -g @fission-ai/openspec" required; then
+  print ""
+  print "  ${Y}Note:${R} OpenSpec is enabled by default in new projects."
+  print "  Without it, rl install will set USE_OPENSPEC=false in .rl/config."
+  print "  Install later with: npm install -g @fission-ai/openspec"
+fi
 
 print ""
 

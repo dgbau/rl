@@ -17,7 +17,7 @@ All project-specific settings live in [`.rl/config`](../../.rl/config). Read it 
 | `BASE_BRANCH` | Target branch for PRs | `main` |
 | `BACKPRESSURE_CMD` | Quality gate command to run before committing | auto-detected |
 | `E2E_CMD` | End-to-end test command | *(none)* |
-| `USE_OPENSPEC` | Whether OpenSpec spec-driven workflow is enabled | `false` |
+| `USE_OPENSPEC` | Whether OpenSpec spec-driven workflow is enabled | `true` |
 | `CLAUDE_MODEL` | Claude model for spawned instances | `opus` |
 | `MAX_ITERATIONS` | Default max iterations in `--auto` mode | `25` |
 | `REVIEW_WAIT` | Seconds to wait between review polling iterations | `90` |
