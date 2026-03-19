@@ -65,14 +65,12 @@ These are synced to every rl-managed project. They teach Claude how to operate t
 
 ## Creating a release
 
-After merging changes to main:
+See [RELEASING.md](RELEASING.md) for the full release process, version bump rules, and pre-release checklist.
 
 ```bash
 rl release --dry-run    # preview changelog and version bump
 rl release              # create release (prompts for confirmation)
 ```
-
-This auto-detects the version bump from conventional commits (`feat` = minor, `fix` = patch, `BREAKING CHANGE` = major), generates CHANGELOG.md, creates a git tag, advances the `stable` tag, and creates a GitHub Release.
 
 ## Dogfooding safely
 

@@ -25,7 +25,7 @@ cd "$RL_ROOT"
 # ---------------------------------------------------------------------------
 # Determine current and next version
 # ---------------------------------------------------------------------------
-LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+LATEST_TAG=$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null || echo "")
 
 if [[ -n "$FORCED_VERSION" ]]; then
   NEXT_VERSION="$FORCED_VERSION"
@@ -33,11 +33,21 @@ elif [[ -z "$LATEST_TAG" ]]; then
   NEXT_VERSION="v0.1.0"
 else
   # Parse commits since last tag to determine bump type
-  local has_breaking=false has_feat=false
+  local has_breaking=false has_feat=false has_fix=false
   while IFS= read -r msg; do
     [[ "$msg" == *"BREAKING CHANGE"* ]] && has_breaking=true
     [[ "$msg" == feat* ]] && has_feat=true
+    [[ "$msg" == fix* ]] && has_fix=true
   done < <(git log "${LATEST_TAG}..HEAD" --pretty=format:"%s" 2>/dev/null)
+
+  # Only feat, fix, and BREAKING CHANGE trigger a release.
+  # docs, chore, refactor, etc. are not releasable on their own.
+  if ! $has_breaking && ! $has_feat && ! $has_fix; then
+    print -P "${D}No releasable commits since ${LATEST_TAG}.${R}"
+    print -P "${D}Only feat, fix, and BREAKING CHANGE trigger a release.${R}"
+    print -P "${D}Use 'rl release vX.Y.Z' to force a release.${R}"
+    exit 0
+  fi
 
   # Parse current version
   local major minor patch

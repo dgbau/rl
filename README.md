@@ -405,33 +405,16 @@ All types get `.rl/config`, `CLAUDE.md`, `AGENTS.md`, `LESSONS.md`, and `.claude
 
 ## Releases and versioning
 
-rl uses [semantic versioning](https://semver.org/) with automated changelog generation from conventional commits.
+rl uses [semantic versioning](https://semver.org/) with version bumps auto-detected from [conventional commits](https://www.conventionalcommits.org/). Only `feat`, `fix`, and `BREAKING CHANGE` commits trigger a release — `docs`, `chore`, `refactor`, etc. are included in the changelog but don't bump the version.
 
 ```bash
 rl release              # auto-detect version bump from commits
-rl release v0.2.0       # force a specific version
 rl release --dry-run    # preview without making changes
 rl version              # show current version
+rl update               # pull latest from main
 ```
 
-Each release:
-1. Generates `CHANGELOG.md` entries from commits since the last tag
-2. Creates a git tag (`v0.1.0`, `v0.2.0`, etc.)
-3. Advances the `stable` tag to the new release
-4. Pushes tags and creates a GitHub Release
-
-### The `stable` tag
-
-The `stable` tag points to the latest tested release. It exists for **dogfooding safety** — when rl develops itself, the loop can modify the same files it runs from. The `stable` tag provides a known-good reference point to recover from if a self-modification breaks the loop.
-
-For normal projects (not developing rl itself), the `stable` tag is not used — rl runs from wherever it's installed.
-
-### Updating
-
-```bash
-rl update               # pulls latest from main (bleeding edge)
-git -C $(which rl | xargs dirname) checkout v0.2.0  # pin to a release
-```
+See [RELEASING.md](RELEASING.md) for the full release process, version bump rules, the `stable` tag, and pre-release checklist.
 
 ---
 
