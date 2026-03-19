@@ -4,7 +4,7 @@
 
 PROJECT_NAME="rl"
 BASE_BRANCH="main"
-BACKPRESSURE_CMD="zsh -n bin/rl libexec/rl-create libexec/rl-install libexec/rl-skills lib/common.sh libexec/rl-migrate libexec/rl-loop resources/core/fetch-reviews.sh resources/core/run-e2e.sh && bash -n resources/core/reply-reviews.sh"
+BACKPRESSURE_CMD="zsh -n bin/rl libexec/rl-create libexec/rl-install libexec/rl-skills lib/common.sh libexec/rl-migrate libexec/rl-loop libexec/rl-fetch-reviews libexec/rl-reply-reviews libexec/rl-run-e2e"
 E2E_CMD=""
 CLAUDE_MODEL="opus"
 MAX_ITERATIONS=25

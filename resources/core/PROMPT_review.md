@@ -130,7 +130,7 @@ After all triage and fixes are complete, write `.rl/review-manifest.json` — a 
 [Ralph] Disagree. <specific reasoning explaining why the suggestion is incorrect or does not apply, with references to actual code lines/behavior>.
 ```
 
-**IMPORTANT**: Every reply MUST start with `[Ralph]`. Every entry MUST have `"resolve": true`. The manifest is consumed by `reply-reviews.sh (managed by rl)` to post replies and resolve threads.
+**IMPORTANT**: Every reply MUST start with `[Ralph]`. Every entry MUST have `"resolve": true`. The manifest is consumed by `rl-reply-reviews` to post replies and resolve threads.
 
 ### Phase 6: Track
 

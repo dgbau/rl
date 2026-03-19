@@ -742,7 +742,7 @@ run_review_mode() {
 
     echo "Fetching PR reviews..."
     local fetch_exit=0
-    RL_WORK="$RL_WORK" "$RL_CORE/fetch-reviews.sh" || fetch_exit=$?
+    RL_WORK="$RL_WORK" "$SCRIPT_DIR/rl-fetch-reviews" || fetch_exit=$?
     if [[ $fetch_exit -eq 1 ]]; then
       echo "No unresolved PR reviews found."
       # Warn if uncommitted changes exist
@@ -781,7 +781,7 @@ run_review_mode() {
           local pending
           pending=$(jq 'length' "$RL_WORK/review-manifest.json" 2>/dev/null || echo "?")
           echo "    2. Post pending review replies ($pending threads):"
-          echo "       bash $RL_CORE/reply-reviews.sh"
+          echo "       $SCRIPT_DIR/rl-reply-reviews"
           echo ""
           echo "    Or re-run the full review loop after fixing:"
           echo "       rl loop review --auto"
@@ -798,9 +798,9 @@ run_review_mode() {
     maybe_manage_pr
 
     # Post replies and resolve threads (only if manifest exists and push succeeded)
-    if [[ -f "$RL_CORE/reply-reviews.sh" && -f "$RL_WORK/review-manifest.json" ]]; then
+    if [[ -f "$SCRIPT_DIR/rl-reply-reviews" && -f "$RL_WORK/review-manifest.json" ]]; then
       echo "Posting replies and resolving review threads..."
-      RL_WORK="$RL_WORK" bash "$RL_CORE/reply-reviews.sh" || echo "WARNING: Some replies/resolves failed (non-fatal)."
+      RL_WORK="$RL_WORK" "$SCRIPT_DIR/rl-reply-reviews" || echo "WARNING: Some replies/resolves failed (non-fatal)."
     fi
 
     # Re-request Copilot review so it triggers on the new push
@@ -842,7 +842,7 @@ run_e2e_mode() {
     echo "--- E2E iteration $iteration / $MAX_ITERATIONS ---"
 
     echo "Running E2E tests..."
-    if "$RL_CORE/run-e2e.sh" "${e2e_args[@]+"${e2e_args[@]}"}"; then
+    if "$SCRIPT_DIR/rl-run-e2e" "${e2e_args[@]+"${e2e_args[@]}"}"; then
       echo "E2E failures detected. Addressing with Claude Code..."
       run_claude "$PROMPT_FILE"
       maybe_push

@@ -11,7 +11,7 @@
 
 ## Checklist
 
-- [ ] Backpressure passes: `zsh -n bin/rl libexec/rl-create libexec/rl-install libexec/rl-skills lib/common.sh libexec/rl-migrate libexec/rl-loop resources/core/fetch-reviews.sh resources/core/run-e2e.sh && bash -n resources/core/reply-reviews.sh`
+- [ ] Backpressure passes: `zsh -n bin/rl libexec/rl-create libexec/rl-install libexec/rl-skills lib/common.sh libexec/rl-migrate libexec/rl-loop libexec/rl-fetch-reviews libexec/rl-reply-reviews libexec/rl-run-e2e`
 - [ ] Tested with `rl install` on a target repo (if changing install/skills/config)
 - [ ] Conventional commit messages used
 - [ ] No hardcoded paths or project-specific references

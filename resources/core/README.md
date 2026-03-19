@@ -85,7 +85,7 @@ The loop reads `.rl/config` from the project root. Environment variables overrid
 | `MAX_ITERATIONS` | `RALPH_MAX_ITERATIONS` | `25` | Max iterations in `--auto` mode |
 | `REVIEW_WAIT` | `RALPH_REVIEW_WAIT` | `90` | Seconds between review iterations |
 | `BACKPRESSURE_CMD` | -- | `npx nx affected -t lint test build` | Quality gate command |
-| `E2E_CMD` | -- | *(none)* | E2E test command (used by `run-e2e.sh`) |
+| `E2E_CMD` | -- | *(none)* | E2E test command (used by `rl loop e2e`) |
 | `USE_OPENSPEC` | -- | `true` | Enable OpenSpec spec-driven development |
 | `USES_TAILWIND` | -- | -- | Agent context hint (styling) |
 | `USES_TYPESCRIPT_STRICT` | -- | -- | Agent context hint (strict TS) |

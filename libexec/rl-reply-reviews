@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 set -euo pipefail
 
 # Post replies to PR review comments and resolve threads using the review manifest.
@@ -9,10 +9,10 @@ set -euo pipefail
 #   1 -- partial failure (some replies/resolves failed, but continued)
 #   2 -- operational error (no PR found, gh not authenticated, missing manifest)
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="${0:A:h}"
 # Support RL_WORK env var for manifest location, fall back to SCRIPT_DIR
 WORK_DIR="${RL_WORK:-$SCRIPT_DIR}"
-REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "${SCRIPT_DIR:h}")"
 MANIFEST_FILE="$WORK_DIR/review-manifest.json"
 
 cd "$REPO_ROOT"

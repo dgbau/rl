@@ -9,11 +9,7 @@ The Ralph Loop pulls all PR review comments (Copilot + human), triages them, and
 
 ## Fetching Reviews
 
-```bash
-./ralph/fetch-reviews.sh
-```
-
-This writes to [`ralph/copilot-reviews.md`](../../ralph/copilot-reviews.md) with comments grouped by source:
+Reviews are fetched automatically by `rl loop review`. The fetcher writes to `.rl/copilot-reviews.md` with comments grouped by source:
 - **Human Review Comments** (higher priority)
 - **Copilot/Bot Review Comments**
 - **Review Summaries** (top-level review comments)
@@ -81,7 +77,7 @@ After fixing code and pushing, reply to each PR comment and resolve its thread.
 
 ### Comment ID Extraction
 
-`fetch-reviews.sh` embeds comment IDs and GraphQL node IDs as HTML comments in the markdown output:
+The review fetcher embeds comment IDs and GraphQL node IDs as HTML comments in the markdown output:
 ```
 <!-- comment_id: 12345678 node_id: PRR_kwDOxxxxxxx -->
 ```

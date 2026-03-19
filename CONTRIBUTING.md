@@ -31,7 +31,7 @@ There's a critical boundary between **toolkit source** (what gets distributed) a
 Run backpressure (syntax check on all shell scripts):
 
 ```bash
-zsh -n bin/rl libexec/rl-create libexec/rl-install libexec/rl-skills lib/common.sh libexec/rl-migrate libexec/rl-loop resources/core/fetch-reviews.sh resources/core/run-e2e.sh && bash -n resources/core/reply-reviews.sh
+zsh -n bin/rl libexec/rl-create libexec/rl-install libexec/rl-skills lib/common.sh libexec/rl-migrate libexec/rl-loop libexec/rl-fetch-reviews libexec/rl-reply-reviews libexec/rl-run-e2e
 ```
 
 ## Commit style

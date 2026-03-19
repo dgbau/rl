@@ -14,7 +14,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed structure.
 
 ### Backpressure (run before every commit)
 ```bash
-zsh -n bin/rl libexec/rl-create libexec/rl-install libexec/rl-skills lib/common.sh libexec/rl-migrate libexec/rl-loop resources/core/fetch-reviews.sh resources/core/run-e2e.sh && bash -n resources/core/reply-reviews.sh
+zsh -n bin/rl libexec/rl-create libexec/rl-install libexec/rl-skills lib/common.sh libexec/rl-migrate libexec/rl-loop libexec/rl-fetch-reviews libexec/rl-reply-reviews libexec/rl-run-e2e
 ```
 
 ### Key Files

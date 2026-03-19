@@ -20,12 +20,12 @@ libexec/                  → Internal subcommands (not invoked directly)
   rl-skills               → Manage skill templates
   rl-migrate              → Migrate from legacy ralph/
   rl-release              → Create releases
+  rl-fetch-reviews        → PR review fetcher (GraphQL resolved-thread filtering)
+  rl-reply-reviews        → PR review reply + thread resolution (bash)
+  rl-run-e2e              → E2E test runner
 lib/common.sh             → Shared shell functions
-resources/core/           → Prompts and runtime scripts (sourced at runtime, NOT copied)
+resources/core/           → Prompts and templates (NOT copied to repos)
   PROMPT_*.md             → Mode-specific prompts (interview, bootstrap, build, amend, review, archive, e2e)
-  fetch-reviews.sh        → PR review fetcher (GraphQL resolved-thread filtering)
-  reply-reviews.sh        → PR review reply + thread resolution
-  run-e2e.sh              → E2E test runner
   CLAUDE.md.template      → Template for generated CLAUDE.md
   ralphrc.template        → Template for config (legacy)
 resources/skills/         → Skill source of truth (synced to repos at runtime)
