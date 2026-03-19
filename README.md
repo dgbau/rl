@@ -33,7 +33,7 @@ The **Ralph Loop** — [originated by Geoffrey Huntley](https://ghuntley.com/loo
 ## Setup
 
 ```bash
-git clone https://github.com/anthropic/rl.git
+git clone https://github.com/dgbau/rl.git
 cd rl
 ./setup.sh    # Adds to PATH, checks/installs all dependencies
 ```
@@ -111,7 +111,7 @@ If you prefer not to use `setup.sh`:
 ### Clone and run setup
 
 ```bash
-git clone https://github.com/anthropic/rl.git
+git clone https://github.com/dgbau/rl.git
 cd rl
 ./setup.sh    # Adds to PATH, checks dependencies
 ```
@@ -177,10 +177,10 @@ rl update    # git pull --ff-only under the hood
 
 ### The loop pattern
 
-1. `loop.sh` spawns a fresh Claude Code instance with a mode-specific prompt
+1. `rl loop` spawns a fresh Claude Code instance with a mode-specific prompt
 2. Claude reads state (tickets, skills, lessons, git history), does one task, commits
 3. The instance exits — context is clean
-4. `loop.sh` runs backpressure (lint/test/build), pushes if configured
+4. `rl loop` runs backpressure (lint/test/build), pushes if configured
 5. Repeat until all tickets are closed or max iterations reached
 
 **Why fresh context?** LLMs degrade as context fills. Restarting each iteration keeps the agent in its "smart zone."

@@ -4,7 +4,7 @@
 
 ### Backpressure (run before every commit)
 ```bash
-zsh -n rl create.sh install.sh skills.sh lib/common.sh
+zsh -n bin/rl libexec/rl-create libexec/rl-install libexec/rl-skills lib/common.sh libexec/rl-migrate libexec/rl-loop resources/core/fetch-reviews.sh resources/core/run-e2e.sh && bash -n resources/core/reply-reviews.sh
 ```
 
 ### Testing Changes

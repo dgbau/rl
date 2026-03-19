@@ -27,7 +27,7 @@ This skill is synced automatically when `rl loop` runs inside the rl toolkit rep
 ## Self-Modification Risk
 
 When dogfooding, the loop modifies the same files it runs from. `--auto` mode is **blocked by default** because:
-- An iteration that breaks `loop.sh` means the next iteration can't start
+- An iteration that breaks `rl-loop` means the next iteration can't start
 - An iteration that corrupts a PROMPT or skill gives wrong instructions to all future iterations
 - Backpressure catches syntax errors but not logic bugs
 
@@ -58,7 +58,7 @@ When dogfooding, the loop modifies the same files it runs from. `--auto` mode is
 1. Create `resources/skills/rl/<name>/SKILL.md`
 2. Add `<!-- category: rl -->` comment
 3. Add `<!-- sync: always|openspec|dogfooding -->` for conditional sync
-4. The skill is automatically discovered by `skills.sh`
+4. The skill is automatically discovered by `rl skills`
 
 ## Skill Taxonomy
 

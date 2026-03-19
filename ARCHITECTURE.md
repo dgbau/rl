@@ -12,8 +12,16 @@
 ### In the rl toolkit (source of truth)
 
 ```
-resources/core/           → Loop runtime (NOT copied to repos — sourced at runtime)
-  loop.sh                 → Main loop orchestrator
+bin/rl                    → CLI entry point (on PATH, dispatcher)
+libexec/                  → Internal subcommands (not invoked directly)
+  rl-create               → Scaffold new project
+  rl-install              → Add rl to existing repo
+  rl-loop                 → Main loop orchestrator
+  rl-skills               → Manage skill templates
+  rl-migrate              → Migrate from legacy ralph/
+  rl-release              → Create releases
+lib/common.sh             → Shared shell functions
+resources/core/           → Prompts and runtime scripts (sourced at runtime, NOT copied)
   PROMPT_*.md             → Mode-specific prompts (interview, bootstrap, build, amend, review, archive, e2e)
   fetch-reviews.sh        → PR review fetcher (GraphQL resolved-thread filtering)
   reply-reviews.sh        → PR review reply + thread resolution
@@ -25,7 +33,6 @@ resources/skills/         → Skill source of truth (synced to repos at runtime)
   universal/              → Software engineering principles (always synced)
   tools/                  → User-selected technology skills (languages/, frameworks/, etc.)
 resources/commands/       → Slash commands for Claude Code (OpenSpec only)
-lib/common.sh             → Shared shell functions
 ```
 
 ### In target repos
@@ -64,12 +71,12 @@ This ensures:
 
 | Command | Script | Purpose |
 |---------|--------|---------|
-| `rl create` | `create.sh` | Scaffold new Nx project with rl configured |
-| `rl install` | `install.sh` | Add rl to any existing git repo (creates .rl/) |
-| `rl loop [mode]` | `resources/core/loop.sh` | Run the Ralph Loop (interview, bootstrap, build, amend, review, archive, e2e) |
-| `rl skills` | `skills.sh` | Manage skill templates (list, add, installed, sync, override, new) |
-| `rl migrate` | `migrate.sh` | Migrate from legacy ralph/ model to .rl/ model |
-| `rl release` | `release.sh` | Create release with auto-changelog, tag, GitHub Release |
+| `rl create` | `libexec/rl-create` | Scaffold new Nx project with rl configured |
+| `rl install` | `libexec/rl-install` | Add rl to any existing git repo (creates .rl/) |
+| `rl loop [mode]` | `libexec/rl-loop` | Run the Ralph Loop (interview, bootstrap, build, amend, review, archive, e2e) |
+| `rl skills` | `libexec/rl-skills` | Manage skill templates (list, add, installed, sync, override, new) |
+| `rl migrate` | `libexec/rl-migrate` | Migrate from legacy ralph/ model to .rl/ model |
+| `rl release` | `libexec/rl-release` | Create release with auto-changelog, tag, GitHub Release |
 | `rl update` | (inline) | Update rl toolkit (git pull) |
 | `rl version` | (inline) | Show current version from git tags |
 
@@ -101,7 +108,7 @@ Precedence: project override > template > stack > language > universal > workflo
 ## Config Flow
 
 ```
-.rl/config (per-repo) → loop.sh sources it → syncs skills → spawns Claude → Claude reads .claude/skills/
+.rl/config (per-repo) → rl-loop sources it → syncs skills → spawns Claude → Claude reads .claude/skills/
 ```
 
 Environment variable overrides: `RL_*` or `RALPH_*` vars take precedence over config file values.

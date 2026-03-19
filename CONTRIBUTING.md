@@ -5,7 +5,7 @@
 rl dogfoods itself — it uses its own loop for development.
 
 ```bash
-git clone https://github.com/anthropic/rl.git
+git clone git@github.com:dgbau/rl.git
 cd rl
 ./setup.sh
 ```
@@ -20,7 +20,8 @@ There's a critical boundary between **toolkit source** (what gets distributed) a
 | `resources/skills/` | Skill source of truth — synced to repos on each `rl loop` |
 | `resources/commands/` | Slash commands (OpenSpec only) |
 | `lib/common.sh` | Shared shell utilities |
-| `rl`, `create.sh`, `install.sh`, `skills.sh`, `migrate.sh` | CLI entry points |
+| `bin/rl` | CLI entry point (dispatcher) |
+| `libexec/rl-*` | Subcommands (create, install, skills, migrate, loop, release) |
 | `.rl/config`, `.tickets/`, `LESSONS.md` | Dogfooding artifacts (rl's own loop) |
 
 **Changes to `resources/` affect every project that uses rl.** Changes to dogfooding files affect only rl development.
@@ -30,7 +31,7 @@ There's a critical boundary between **toolkit source** (what gets distributed) a
 Run backpressure (syntax check on all shell scripts):
 
 ```bash
-zsh -n rl create.sh install.sh skills.sh lib/common.sh migrate.sh resources/core/loop.sh resources/core/fetch-reviews.sh resources/core/run-e2e.sh && bash -n resources/core/reply-reviews.sh
+zsh -n bin/rl libexec/rl-create libexec/rl-install libexec/rl-skills lib/common.sh libexec/rl-migrate libexec/rl-loop resources/core/fetch-reviews.sh resources/core/run-e2e.sh && bash -n resources/core/reply-reviews.sh
 ```
 
 ## Commit style
@@ -77,7 +78,7 @@ This auto-detects the version bump from conventional commits (`feat` = minor, `f
 
 When working on rl itself, be aware:
 - **Don't use `--auto`** unless you've confirmed the prompt. The loop blocks it by default.
-- Changes to `resources/core/`, `lib/common.sh`, or `skills.sh` affect the running loop on the next iteration.
+- Changes to `resources/core/`, `lib/common.sh`, or `libexec/rl-*` affect the running loop on the next iteration.
 - Always run full backpressure before committing.
 - If the loop breaks, recover with: `git checkout stable`
 

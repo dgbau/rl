@@ -14,23 +14,26 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed structure.
 
 ### Backpressure (run before every commit)
 ```bash
-zsh -n rl create.sh install.sh skills.sh lib/common.sh migrate.sh resources/core/loop.sh resources/core/fetch-reviews.sh resources/core/run-e2e.sh && bash -n resources/core/reply-reviews.sh
+zsh -n bin/rl libexec/rl-create libexec/rl-install libexec/rl-skills lib/common.sh libexec/rl-migrate libexec/rl-loop resources/core/fetch-reviews.sh resources/core/run-e2e.sh && bash -n resources/core/reply-reviews.sh
 ```
 
 ### Key Files
 | File | Purpose |
 |------|---------|
-| `rl` | CLI entry point (dispatcher) |
-| `create.sh` | Scaffold new Nx project |
-| `install.sh` | Add Ralph Loop to existing repo (creates .rl/) |
-| `skills.sh` | Manage skill templates (list, add, sync, override) |
-| `migrate.sh` | Migrate repos from legacy ralph/ to .rl/ model |
+| `bin/rl` | CLI entry point (dispatcher) |
+| `libexec/rl-create` | Scaffold new Nx project |
+| `libexec/rl-install` | Add Ralph Loop to existing repo (creates .rl/) |
+| `libexec/rl-skills` | Manage skill templates (list, add, sync, override) |
+| `libexec/rl-migrate` | Migrate repos from legacy ralph/ to .rl/ model |
+| `libexec/rl-loop` | Ralph Loop orchestrator (interview, build, review, etc.) |
 | `lib/common.sh` | Shared utilities (detection, prompts, generation) |
 
 ### Key Directories
 | Directory | Purpose |
 |-----------|---------|
-| `resources/core/` | Loop runtime (sourced at runtime, not copied) |
+| `bin/` | User-facing entry point (on PATH) |
+| `libexec/` | Internal subcommands (called by dispatcher) |
+| `resources/core/` | Prompts, review scripts (sourced at runtime) |
 | `resources/skills/rl/` | rl operational skills (synced to repos, with sync conditions) |
 | `resources/skills/universal/` | Software engineering principles (always synced) |
 | `resources/skills/tools/` | Technology skills by category (user-selectable) |
