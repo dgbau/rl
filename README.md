@@ -436,6 +436,8 @@ rl develops itself using its own loop. This creates a unique challenge: the agen
 
 The Ralph Loop pattern was originated by [Geoffrey Huntley](https://ghuntley.com/specs), who demonstrated that AI agents produce dramatically better results when given fresh context per task, hard quality gates, and spec-driven requirements. This toolkit implements and extends his approach with hybrid ticketing, skill management, and multi-stack support.
 
+Thanks to [Andreas Hepp](https://github.com/hepp) for sharing the Ralph Loop concept with me.
+
 ## License
 
 MIT. See [LICENSE](LICENSE) and [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES).
