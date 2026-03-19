@@ -4,35 +4,35 @@
 
 set -euo pipefail
 
-RL_DIR="${0:A:h}"
+RL_DIR="${0:A:h:h}"
 
 case "${1:-}" in
   create)
     shift
-    exec "$RL_DIR/create.sh" "$@"
+    exec "$RL_DIR/libexec/rl-create" "$@"
     ;;
   install)
     shift
-    exec "$RL_DIR/install.sh" "$@"
+    exec "$RL_DIR/libexec/rl-install" "$@"
     ;;
   loop)
     shift
     # Resolve repo root from current directory
     RL_REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
     export RL_REPO_ROOT
-    exec "$RL_DIR/resources/core/loop.sh" "$@"
+    exec "$RL_DIR/libexec/rl-loop" "$@"
     ;;
   skills)
     shift
-    exec "$RL_DIR/skills.sh" "$@"
+    exec "$RL_DIR/libexec/rl-skills" "$@"
     ;;
   migrate)
     shift
-    exec "$RL_DIR/migrate.sh" "$@"
+    exec "$RL_DIR/libexec/rl-migrate" "$@"
     ;;
   release)
     shift
-    exec "$RL_DIR/release.sh" "$@"
+    exec "$RL_DIR/libexec/rl-release" "$@"
     ;;
   update)
     shift

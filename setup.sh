@@ -25,9 +25,9 @@ ask()  { print -n "  ${C}?${R} $1 " }
 # ---------------------------------------------------------------------------
 # Detect rl root
 # ---------------------------------------------------------------------------
-if [[ -f "${0:A:h}/rl" ]]; then
+if [[ -f "${0:A:h}/bin/rl" ]]; then
   RL_DIR="${0:A:h}"
-elif [[ -f "./rl" ]]; then
+elif [[ -f "./bin/rl" ]]; then
   RL_DIR="${PWD}"
 else
   print "${E}${B}Error:${R} Run this script from the rl repo directory."
@@ -44,7 +44,7 @@ print ""
 # ---------------------------------------------------------------------------
 print "${B}Checking PATH...${R}"
 
-if (( $+commands[rl] )) && [[ "${commands[rl]:A:h}" == "$RL_DIR" ]]; then
+if (( $+commands[rl] )) && [[ "${commands[rl]:A:h}" == "$RL_DIR/bin" ]]; then
   ok "rl is already on PATH"
 else
   SHELL_RC=""
@@ -56,7 +56,7 @@ else
     SHELL_RC="$HOME/.bash_profile"
   fi
 
-  if [[ -n "$SHELL_RC" ]] && grep -qF "$RL_DIR" "$SHELL_RC" 2>/dev/null; then
+  if [[ -n "$SHELL_RC" ]] && grep -qF "$RL_DIR/bin" "$SHELL_RC" 2>/dev/null; then
     ok "PATH entry found in ${SHELL_RC##*/} (may need: source $SHELL_RC)"
   elif [[ -n "$SHELL_RC" ]]; then
     ask "Add rl to PATH in ${SHELL_RC##*/}? [Y/n]"
@@ -64,14 +64,14 @@ else
     if [[ "${ans:-Y}" =~ ^[Yy] ]]; then
       print "" >> "$SHELL_RC"
       print "# rl — Ralph Loop Toolkit" >> "$SHELL_RC"
-      print "export PATH=\"$RL_DIR:\$PATH\"" >> "$SHELL_RC"
+      print "export PATH=\"$RL_DIR/bin:\$PATH\"" >> "$SHELL_RC"
       ok "Added to $SHELL_RC"
-      export PATH="$RL_DIR:$PATH"
+      export PATH="$RL_DIR/bin:$PATH"
     else
-      warn "Skipped. Add manually: export PATH=\"$RL_DIR:\$PATH\""
+      warn "Skipped. Add manually: export PATH=\"$RL_DIR/bin:\$PATH\""
     fi
   else
-    warn "No shell rc file found. Add manually: export PATH=\"$RL_DIR:\$PATH\""
+    warn "No shell rc file found. Add manually: export PATH=\"$RL_DIR/bin:\$PATH\""
   fi
 fi
 

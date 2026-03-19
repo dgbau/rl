@@ -35,7 +35,7 @@
 #   --no-prompt         Skip all interactive prompts
 
 set -euo pipefail
-source "${0:A:h}/lib/common.sh"
+source "${0:A:h}/../lib/common.sh"
 
 # ---------------------------------------------------------------------------
 # Defaults
@@ -477,7 +477,7 @@ if (( ${#selected_skills} )); then
   install_args+=("--skills" "${(j:,:)selected_skills}")
 fi
 
-"${0:A:h}/install.sh" "${install_args[@]}"
+"${0:A:h}/rl-install" "${install_args[@]}"
 
 # ---------------------------------------------------------------------------
 # Git setup

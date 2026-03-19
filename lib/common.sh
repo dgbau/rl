@@ -31,7 +31,7 @@ resolve_rl_home() {
   fi
   # Try to resolve from the `rl` command in PATH
   if (( $+commands[rl] )); then
-    local resolved="${commands[rl]:A:h}"
+    local resolved="${commands[rl]:A:h:h}"
     if [[ -d "$resolved/resources/core" ]]; then
       print "$resolved"
       return
@@ -272,6 +272,154 @@ prompt_select() {
 }
 
 prompt_multiselect() {
+  # Interactive arrow-key/spacebar multi-select menu.
+  # Usage: prompt_multiselect "Question?" option1 option2 ... [preselected_csv]
+  #   Last arg is treated as comma-separated preselected/locked items if it
+  #   matches any option name (otherwise treated as another option).
+  # Outputs selected options, one per line (to stdout).
+  # Falls back to number input if terminal doesn't support cursor control.
+  local question="$1"; shift
+
+  # Check if last arg is a preselected list (comma-separated, matching options)
+  local -a locked_items=()
+  local -a options=()
+  if (( $# >= 2 )); then
+    local last_arg="${@[-1]}"
+    # If it contains a comma or matches an option, treat as preselected list
+    local -a candidate_locked=("${(@s:,:)last_arg}")
+    local -a remaining_args=("${@[1,-2]}")
+    local is_preselect=false
+    for cl in "${candidate_locked[@]}"; do
+      for ra in "${remaining_args[@]}"; do
+        [[ "$cl" == "$ra" ]] && { is_preselect=true; break 2; }
+      done
+    done
+    if [[ "$is_preselect" == "true" ]]; then
+      locked_items=("${candidate_locked[@]}")
+      options=("${remaining_args[@]}")
+    else
+      options=("$@")
+    fi
+  else
+    options=("$@")
+  fi
+
+  local total=${#options}
+
+  # Fallback for non-interactive or dumb terminals
+  if [[ ! -t 0 || "${TERM:-dumb}" == "dumb" ]]; then
+    _prompt_multiselect_fallback "$question" "${options[@]}"
+    return
+  fi
+
+  # Build locked set and initial selection state
+  local -a selected=()
+  local -a is_locked=()
+  for (( i = 1; i <= total; i++ )); do
+    if (( ${locked_items[(Ie)${options[$i]}]} )); then
+      selected[$i]=1
+      is_locked[$i]=1
+    else
+      selected[$i]=0
+      is_locked[$i]=0
+    fi
+  done
+  local cursor=1
+  # Start cursor on first non-locked item
+  for (( i = 1; i <= total; i++ )); do
+    if [[ ${is_locked[$i]} -eq 0 ]]; then
+      cursor=$i
+      break
+    fi
+  done
+
+  # Render the menu
+  _ms_render() {
+    local i
+    for (( i = 1; i <= total; i++ )); do
+      if [[ ${is_locked[$i]} -eq 1 ]]; then
+        # Locked: greyed out with checkmark
+        local pointer="  "
+        [[ $i -eq $cursor ]] && pointer="${D}▸${R}"
+        print -P "${pointer} ${D}✔ ${options[$i]} (already selected)${R}" > /dev/tty
+      else
+        local marker
+        [[ ${selected[$i]} -eq 1 ]] && marker="${G}◉${R}" || marker="${D}○${R}"
+        local pointer="  "
+        [[ $i -eq $cursor ]] && pointer="${Y}▸${R}"
+        print -P "${pointer} ${marker} ${options[$i]}" > /dev/tty
+      fi
+    done
+    print -P "${D}  ↑↓ move  ␣ toggle  a all  n none  ↵ confirm${R}" > /dev/tty
+  }
+
+  # Clear rendered lines
+  _ms_clear() {
+    local lines=$(( total + 1 ))
+    for (( i = 0; i < lines; i++ )); do
+      print -n "\033[A\033[2K" > /dev/tty
+    done
+  }
+
+  print -P "${C}${B}${question}${R}" > /dev/tty
+
+  # Initial render
+  _ms_render
+
+  # Read keys
+  while true; do
+    local key
+    read -rsk 1 key < /dev/tty
+
+    if [[ "$key" == $'\e' ]]; then
+      local seq
+      read -rsk 1 seq < /dev/tty
+      if [[ "$seq" == "[" ]]; then
+        read -rsk 1 seq < /dev/tty
+        case "$seq" in
+          A) # Up
+            (( cursor > 1 )) && (( cursor-- ))
+            ;;
+          B) # Down
+            (( cursor < total )) && (( cursor++ ))
+            ;;
+        esac
+      fi
+    elif [[ "$key" == " " ]]; then
+      # Toggle (skip locked)
+      if [[ ${is_locked[$cursor]} -eq 0 ]]; then
+        if [[ ${selected[$cursor]} -eq 1 ]]; then
+          selected[$cursor]=0
+        else
+          selected[$cursor]=1
+        fi
+      fi
+    elif [[ "$key" == "a" ]]; then
+      # Select all unlocked
+      for (( i = 1; i <= total; i++ )); do
+        [[ ${is_locked[$i]} -eq 0 ]] && selected[$i]=1
+      done
+    elif [[ "$key" == "n" ]]; then
+      # Deselect all unlocked
+      for (( i = 1; i <= total; i++ )); do
+        [[ ${is_locked[$i]} -eq 0 ]] && selected[$i]=0
+      done
+    elif [[ "$key" == $'\n' || "$key" == $'\r' ]]; then
+      break
+    fi
+
+    _ms_clear
+    _ms_render
+  done
+
+  # Output newly selected (non-locked) options to stdout
+  for (( i = 1; i <= total; i++ )); do
+    [[ ${selected[$i]} -eq 1 && ${is_locked[$i]} -eq 0 ]] && print "${options[$i]}"
+  done
+}
+
+_prompt_multiselect_fallback() {
+  # Number-based fallback for non-interactive terminals
   local question="$1"; shift
   local -a options=("$@")
 

@@ -9,7 +9,7 @@
 #   rl skills add-openspec      # Install OpenSpec skills + commands + npm package
 
 set -euo pipefail
-source "${0:A:h}/lib/common.sh"
+source "${0:A:h}/../lib/common.sh"
 
 # ---------------------------------------------------------------------------
 # Resolve current repo
@@ -147,7 +147,7 @@ cmd_sync() {
 
   # Detect if we're developing the rl toolkit itself
   local is_rl_toolkit=false
-  if [[ -f "$REPO_ROOT/resources/core/loop.sh" && -f "$REPO_ROOT/lib/common.sh" ]]; then
+  if [[ -f "$REPO_ROOT/libexec/rl-loop" && -f "$REPO_ROOT/lib/common.sh" ]]; then
     is_rl_toolkit=true
   fi
 

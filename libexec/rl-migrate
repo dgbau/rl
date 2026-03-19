@@ -5,12 +5,12 @@ set -euo pipefail
 #
 # Handles two scenarios:
 #   1. Repos installed via `rl install` (have .ralphrc + ralph/)
-#   2. Repos with custom ralph/ (like sfi-webapps, no .ralphrc, env-var config)
+#   2. Repos with custom ralph/ (no .ralphrc, env-var config)
 #
 # Usage:
 #   rl migrate [directory]
 
-source "${0:A:h}/lib/common.sh"
+source "${0:A:h}/../lib/common.sh"
 
 TARGET_DIR="${1:-.}"
 TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
@@ -188,7 +188,7 @@ if [[ -f "$TARGET_DIR/.gitignore" ]]; then
     sed -i '' 's|ralph/\.e2e-|.rl/.e2e-|g' "$TARGET_DIR/.gitignore"
     updated=true
   fi
-  # Also handle sfi-webapps style entries
+  # Also handle repos with explicit e2e output paths
   if grep -q "ralph/.e2e-output" "$TARGET_DIR/.gitignore" 2>/dev/null; then
     sed -i '' 's|ralph/\.e2e-output|.rl/.e2e-output|g' "$TARGET_DIR/.gitignore"
     sed -i '' 's|ralph/\.e2e-raw-output|.rl/.e2e-raw-output|g' "$TARGET_DIR/.gitignore"

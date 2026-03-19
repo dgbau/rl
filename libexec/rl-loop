@@ -30,24 +30,22 @@ set -euo pipefail
 # Path resolution
 # ---------------------------------------------------------------------------
 SCRIPT_DIR="${0:A:h}"
+RL_TOOLKIT="${SCRIPT_DIR:h}"
+RL_CORE="$RL_TOOLKIT/resources/core"
 
-# Determine repo root and resource paths
+# Determine repo root
 if [[ -n "${RL_REPO_ROOT:-}" ]]; then
   # Invoked via `rl loop` — RL_REPO_ROOT is set by the dispatcher
   REPO_ROOT="$RL_REPO_ROOT"
-  RL_CORE="$SCRIPT_DIR"
-elif [[ -f "${SCRIPT_DIR:h}/.rl/config" ]]; then
-  # loop.sh lives in rl toolkit, repo has .rl/config
-  REPO_ROOT="${SCRIPT_DIR:h}"
-  RL_CORE="$SCRIPT_DIR"
-elif [[ -f "${SCRIPT_DIR:h}/.ralphrc" ]]; then
+elif [[ -f "${RL_TOOLKIT}/.rl/config" ]]; then
+  # Dogfooding: rl toolkit has its own .rl/config
+  REPO_ROOT="$RL_TOOLKIT"
+elif [[ -f "${RL_TOOLKIT}/.ralphrc" ]]; then
   # Legacy: repo still has .ralphrc (run `rl migrate` to upgrade)
-  REPO_ROOT="${SCRIPT_DIR:h}"
-  RL_CORE="$SCRIPT_DIR"
+  REPO_ROOT="$RL_TOOLKIT"
 else
-  # Fallback: assume parent dir is repo root
-  REPO_ROOT="${SCRIPT_DIR:h}"
-  RL_CORE="$SCRIPT_DIR"
+  # Fallback: assume toolkit dir is repo root
+  REPO_ROOT="$RL_TOOLKIT"
 fi
 
 # Working directory for ephemeral files (reviews, manifests, e2e results)
@@ -124,7 +122,7 @@ done
 # The loop modifies the same files it runs from — auto mode risks breaking
 # the loop mid-run with no human checkpoint.
 # ---------------------------------------------------------------------------
-if [[ "$AUTO_MODE" == "true" && -f "$REPO_ROOT/resources/core/loop.sh" && -f "$REPO_ROOT/lib/common.sh" ]]; then
+if [[ "$AUTO_MODE" == "true" && -f "$REPO_ROOT/libexec/rl-loop" && -f "$REPO_ROOT/lib/common.sh" ]]; then
   echo ""
   echo "⚠️  DOGFOODING SAFETY WARNING"
   echo ""
@@ -237,7 +235,7 @@ echo "============================================"
 # Skill sync: ensure .claude/skills/ has latest from rl source
 # ============================================
 sync_skills() {
-  local rl_home="${RL_HOME:-${RL_CORE:h}}"
+  local rl_home="${RL_HOME:-$RL_TOOLKIT}"
   local skills_src="$rl_home/resources/skills"
 
   # Only sync if we can find the rl skills source
@@ -293,7 +291,7 @@ sync_skills() {
     fi
     case "$sync_cond" in
       openspec)   [[ "$USE_OPENSPEC" != "true" ]] && continue ;;
-      dogfooding) [[ ! -f "$REPO_ROOT/resources/core/loop.sh" ]] && continue ;;
+      dogfooding) [[ ! -f "$REPO_ROOT/libexec/rl-loop" ]] && continue ;;
     esac
     promote_if_modified "$skill_name" "$skill_dir/SKILL.md"
     mkdir -p "$REPO_ROOT/.claude/skills/$skill_name"

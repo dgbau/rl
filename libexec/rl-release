@@ -6,7 +6,7 @@
 #   rl release --dry-run    # show what would happen
 
 set -euo pipefail
-source "${0:A:h}/lib/common.sh"
+source "${0:A:h}/../lib/common.sh"
 
 DRY_RUN=false
 FORCED_VERSION=""

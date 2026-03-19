@@ -10,7 +10,7 @@ set -euo pipefail
 # Can also be called internally from create.sh with flags:
 #   install.sh --use-openspec --skills nextjs,tailwind --no-prompt
 
-source "${0:A:h}/lib/common.sh"
+source "${0:A:h}/../lib/common.sh"
 
 # ---------------------------------------------------------------------------
 # Defaults
@@ -115,6 +115,12 @@ print ""
 # Interactive configuration (if not passed via flags)
 # ---------------------------------------------------------------------------
 if [[ "$NO_PROMPT" != "true" ]]; then
+  # Base branch confirmation
+  print -nP "${C}Base branch${R} [${Y}${BASE_BRANCH}${R}]: " > /dev/tty
+  local user_branch
+  read -r user_branch < /dev/tty
+  [[ -n "$user_branch" ]] && BASE_BRANCH="$user_branch"
+
   # OpenSpec
   if [[ -z "$USE_OPENSPEC" ]]; then
     if [[ "$HAS_OPENSPEC" == "true" ]]; then
@@ -203,9 +209,29 @@ if [[ "$NO_PROMPT" != "true" ]]; then
 
     if (( ${#available_templates} )); then
       print ""
+
+      # Step 1: offer suggested skills if any were detected
+      if (( ${#valid_suggestions} )); then
+        if prompt_yn "Install suggested skills? (${(j:, :)valid_suggestions})" "y"; then
+          SELECTED_SKILLS=("${valid_suggestions[@]}")
+        fi
+      fi
+
+      # Step 2: show full list with already-selected greyed out
+      local -a preselected=()
+      for t in "${available_templates[@]}"; do
+        if (( ${SELECTED_SKILLS[(Ie)$t]} )); then
+          preselected+=("$t")
+        fi
+      done
+      print ""
+      local -a newly_selected=()
       while IFS= read -r line; do
-        [[ -n "$line" ]] && SELECTED_SKILLS+=("$line")
-      done < <(prompt_multiselect "Which skill templates would you like to install?" "${available_templates[@]}")
+        [[ -n "$line" ]] && newly_selected+=("$line")
+      done < <(prompt_multiselect "Any additional skills?" "${available_templates[@]}" "${(j:,:)preselected}")
+      for s in "${newly_selected[@]}"; do
+        (( ${SELECTED_SKILLS[(Ie)$s]} )) || SELECTED_SKILLS+=("$s")
+      done
     fi
   fi
 fi
