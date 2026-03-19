@@ -143,7 +143,7 @@ rl update    # git pull --ff-only under the hood
 |---------|------|--------------|
 | `rl loop interview` | Interview | Claude interviews you, creates proposal. Always interactive. |
 | `rl loop bootstrap` | Bootstrap | Creates tk tickets from proposal. No code written. |
-| `rl loop` | Build | Implements one ticket, tests, commits. |
+| `rl loop` | Build | Implements one ticket per iteration. Chains in `--auto`. |
 | `rl loop amend` | Amend | Diagnoses spec gaps, amends artifacts, creates tickets. Always interactive. |
 | `rl loop archive` | Archive | Merges OpenSpec delta specs into main specs. |
 | `rl loop review` | Review | Triages PR feedback, fixes code, posts replies. |
@@ -181,7 +181,7 @@ rl update    # git pull --ff-only under the hood
 2. Claude reads state (tickets, skills, lessons, git history), does one task, commits
 3. The instance exits — context is clean
 4. `rl loop` runs backpressure (lint/test/build), pushes if configured
-5. Repeat until all tickets are closed or max iterations reached
+5. In interactive mode, you review and decide whether to continue. In `--auto` mode, repeats until all tickets are closed or max iterations reached.
 
 **Why fresh context?** LLMs degrade as context fills. Restarting each iteration keeps the agent in its "smart zone."
 
@@ -203,8 +203,8 @@ rl update    # git pull --ff-only under the hood
 | `AGENTS.md` | Operational guide | Yes |
 | `LESSONS.md` | Cumulative learnings | Yes |
 | `.tickets/` | Task queue (tk) | Yes |
-| `IMPLEMENTATION_PLAN.md` | Vision from interview | Yes |
-| `openspec/` | Specs (if USE_OPENSPEC=true) | Yes |
+| `IMPLEMENTATION_PLAN.md` | Vision from interview (always created) | Yes |
+| `openspec/` | Living specs and delta changes (if USE_OPENSPEC=true) | Yes |
 | `.rl/copilot-reviews.md` | Working file | No (.gitignore) |
 | `.rl/review-manifest.json` | Working file | No (.gitignore) |
 | `.rl/e2e-results.md` | Working file | No (.gitignore) |
@@ -367,7 +367,7 @@ When `USE_OPENSPEC=true` (the default), [OpenSpec](https://github.com/fission-ai
 3. **Build** reads delta specs for requirements
 4. **Archive** merges delta specs into `openspec/specs/`
 
-When disabled, interview creates `IMPLEMENTATION_PLAN.md` instead and archive is skipped.
+Interview always creates `IMPLEMENTATION_PLAN.md` as a human-readable summary. When OpenSpec is disabled, this becomes the primary planning artifact and archive mode is skipped.
 
 ---
 
