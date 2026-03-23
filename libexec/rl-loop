@@ -258,7 +258,7 @@ sync_skills() {
     [[ -f "$override" ]] && return
 
     # Skip if target doesn't exist yet (first sync)
-    [[ -f "$target" ]] || return
+    [[ -f "$target" ]] || return 0
 
     # Compare target (what's in .claude/skills/) with what we're about to write
     if ! diff -q "$target" "$source_file" &>/dev/null; then
