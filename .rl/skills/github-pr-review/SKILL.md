@@ -1,20 +1,22 @@
 ---
 name: github-pr-review
-description: "Fetching and addressing GitHub PR review comments from Copilot and human reviewers. Includes triage, verification, ticket management, and conditional spec updates. Use when in review mode or when PR feedback needs to be addressed."
+description: "Fetching and addressing GitHub PR review comments from Copilot, Greptile, and human reviewers. Includes provider-calibrated triage, verification, ticket management, and conditional spec updates. Use when in review mode or when PR feedback needs to be addressed."
 ---
 
 # GitHub PR Review
 
-The Ralph Loop pulls all PR review comments (Copilot + human), triages them, and acts on each according to its classification.
+The Ralph Loop pulls all PR review comments (Copilot, Greptile, and human), triages them with provider-calibrated skepticism, and acts on each according to its classification.
 
 ## Fetching Reviews
 
 Reviews are fetched automatically by `rl loop review`, which writes to [`.rl/pr-reviews.md`](../../.rl/pr-reviews.md) with comments grouped by source:
-- **Human Review Comments** (higher priority)
+- **Greptile Summary** (issue comment with confidence score and analysis)
+- **Human Review Comments** (highest priority)
+- **Greptile Review Comments** (codebase-aware inline findings)
 - **Copilot/Bot Review Comments**
 - **Review Summaries** (top-level review comments)
 
-Each comment includes: author, file path, line number, comment body, and diff hunk.
+Each comment includes: author, file path, line number, comment body, and diff hunk. Issue comments (Greptile summary) use `issue_comment_id` instead of `comment_id`.
 
 ## Triage Categories
 
@@ -25,14 +27,28 @@ Each comment includes: author, file path, line number, comment body, and diff hu
 | **Spec gap** | "What happens when user has no permissions?", "Edge case not handled" | Update specs (if `USE_OPENSPEC=true` in `.rl/config`) or note in `LESSONS.md` |
 | **Invalid** | Misread diff, already fixed, doesn't apply | Document why, skip |
 
-## Verification Protocol
+## Provider-Calibrated Verification
 
-Before acting on any comment:
+Before acting on any comment, calibrate your skepticism by provider:
 
+| Provider | Trust level | Guidance |
+|----------|-------------|----------|
+| **Human** | Highest priority | May reflect business context or domain knowledge not visible in code |
+| **Greptile** | Codebase-aware, generally reliable | Has indexed the full repo — findings tend to be accurate. Still verify. |
+| **Copilot** | High false-positive rate | Often flags style preferences or suggests breaking changes. Verify thoroughly. |
+
+For all providers:
 1. **Read the actual current code** (not just the diff hunk -- hunks can be stale)
 2. **Check if already fixed** by a subsequent commit
 3. **Verify the claim** -- is the reviewer correct about the behavior?
 4. **Assess impact** -- will the suggested change break anything?
+
+### Reading Greptile Summaries
+
+When a Greptile summary is present in `pr-reviews.md`:
+- Read the **confidence score** for analysis certainty
+- Read **mermaid diagrams** if present for change impact visualization
+- The summary provides context, but **individual inline findings are what need triage**
 
 ## Acting on Comments
 
@@ -78,8 +94,15 @@ After fixing code and pushing, reply to each PR comment and resolve its thread.
 ### Comment ID Extraction
 
 The review fetcher (`libexec/rl-fetch-reviews`) embeds comment IDs and GraphQL node IDs as HTML comments in the markdown output:
+
+**Review comments** (inline — Copilot, Greptile, human):
 ```
 <!-- comment_id: 12345678 node_id: PRR_kwDOxxxxxxx -->
+```
+
+**Issue comments** (timeline — Greptile summary):
+```
+<!-- issue_comment_id: 99999999 -->
 ```
 
 The repository and PR number are in the header:
@@ -87,6 +110,12 @@ The repository and PR number are in the header:
 # PR Review Comments (PR #42)
 Repository: `owner/repo`
 ```
+
+### Manifest `comment_type` Field
+
+The review manifest (`.rl/review-manifest.json`) uses `comment_type` to route replies:
+- `"review"` — reply via PR comment API + resolve thread
+- `"issue"` — reply via issue comment API (no thread resolution)
 
 ### Replying via GitHub API
 
