@@ -27,3 +27,7 @@ Fixed per review: updated .rl/skills/github-pr-review/SKILL.md to use correct fe
 **2026-03-23T19:59:20Z**
 
 Fixed per review: updated .rl/skills/ralph-workflow/SKILL.md provider wording and git-tracked description
+
+**2026-03-23T23:34:04Z**
+
+Fixed per review: consolidated duplicate wording in Fetching Reviews section, updated .ralphrc references to .rl/config, fixed stale fetch-reviews.sh reference in project override SKILL.md

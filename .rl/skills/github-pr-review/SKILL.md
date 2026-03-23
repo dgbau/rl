@@ -9,9 +9,7 @@ The Ralph Loop pulls all PR review comments (Copilot + human), triages them, and
 
 ## Fetching Reviews
 
-Reviews are fetched automatically by `rl loop review`. The fetcher writes to `.rl/pr-reviews.md` with comments grouped by source:
-
-This writes to [`.rl/pr-reviews.md`](../../.rl/pr-reviews.md) with comments grouped by source:
+Reviews are fetched automatically by `rl loop review`, which writes to [`.rl/pr-reviews.md`](../../.rl/pr-reviews.md) with comments grouped by source:
 - **Human Review Comments** (higher priority)
 - **Copilot/Bot Review Comments**
 - **Review Summaries** (top-level review comments)
@@ -24,7 +22,7 @@ Each comment includes: author, file path, line number, comment body, and diff hu
 |----------|----------|--------|
 | **Code fix** | Bug, missing null check, style issue, unused import | Fix code directly, note on ticket |
 | **Design concern** | "This API should be paginated", "Consider using X pattern" | Amend ticket or create new task |
-| **Spec gap** | "What happens when user has no permissions?", "Edge case not handled" | Update specs (if `USE_OPENSPEC=true` in `.ralphrc`) or note in `LESSONS.md` |
+| **Spec gap** | "What happens when user has no permissions?", "Edge case not handled" | Update specs (if `USE_OPENSPEC=true` in `.rl/config`) or note in `LESSONS.md` |
 | **Invalid** | Misread diff, already fixed, doesn't apply | Document why, skip |
 
 ## Verification Protocol
@@ -55,9 +53,9 @@ tk create "<title>" -t task --parent <epic-id> -p 2 \
   -d "<description>" --acceptance "<done criteria>"
 ```
 
-### Spec Gap (if USE_OPENSPEC=true in .ralphrc)
+### Spec Gap (if USE_OPENSPEC=true in .rl/config)
 
-When `USE_OPENSPEC=true` is set in `.ralphrc`, spec gaps should be addressed in OpenSpec:
+When `USE_OPENSPEC=true` is set in `.rl/config`, spec gaps should be addressed in OpenSpec:
 
 ```
 # If active change exists:
@@ -79,7 +77,7 @@ After fixing code and pushing, reply to each PR comment and resolve its thread.
 
 ### Comment ID Extraction
 
-`fetch-reviews.sh` embeds comment IDs and GraphQL node IDs as HTML comments in the markdown output:
+The review fetcher (`libexec/rl-fetch-reviews`) embeds comment IDs and GraphQL node IDs as HTML comments in the markdown output:
 ```
 <!-- comment_id: 12345678 node_id: PRR_kwDOxxxxxxx -->
 ```

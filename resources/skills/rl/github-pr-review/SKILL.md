@@ -22,7 +22,7 @@ Each comment includes: author, file path, line number, comment body, and diff hu
 |----------|----------|--------|
 | **Code fix** | Bug, missing null check, style issue, unused import | Fix code directly, note on ticket |
 | **Design concern** | "This API should be paginated", "Consider using X pattern" | Amend ticket or create new task |
-| **Spec gap** | "What happens when user has no permissions?", "Edge case not handled" | Update specs (if `USE_OPENSPEC=true` in `.ralphrc`) or note in `LESSONS.md` |
+| **Spec gap** | "What happens when user has no permissions?", "Edge case not handled" | Update specs (if `USE_OPENSPEC=true` in `.rl/config`) or note in `LESSONS.md` |
 | **Invalid** | Misread diff, already fixed, doesn't apply | Document why, skip |
 
 ## Verification Protocol
@@ -53,9 +53,9 @@ tk create "<title>" -t task --parent <epic-id> -p 2 \
   -d "<description>" --acceptance "<done criteria>"
 ```
 
-### Spec Gap (if USE_OPENSPEC=true in .ralphrc)
+### Spec Gap (if USE_OPENSPEC=true in .rl/config)
 
-When `USE_OPENSPEC=true` is set in `.ralphrc`, spec gaps should be addressed in OpenSpec:
+When `USE_OPENSPEC=true` is set in `.rl/config`, spec gaps should be addressed in OpenSpec:
 
 ```
 # If active change exists:
