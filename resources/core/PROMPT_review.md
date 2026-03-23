@@ -13,7 +13,7 @@ Read PR review comments (from Copilot and human reviewers), **skeptically verify
 1. Read [`AGENTS.md`](../AGENTS.md) for project conventions
 2. Read [`LESSONS.md`](../LESSONS.md) for cumulative learnings
 3. Read [`.claude/skills/github-pr-review/SKILL.md`](../.claude/skills/github-pr-review/SKILL.md) for the full review workflow
-4. Read [`.rl/copilot-reviews.md`](./copilot-reviews.md) for the review comments
+4. Read [`.rl/pr-reviews.md`](./pr-reviews.md) for the review comments
 5. Identify active tickets:
    ```bash
    tk ls --status=in_progress
@@ -84,7 +84,7 @@ Fix ALL failures before proceeding.
 
 ### Phase 5: Write Review Manifest
 
-After all triage and fixes are complete, write `.rl/review-manifest.json` — a JSON array with one entry per comment. Each comment in `copilot-reviews.md` has a `<!-- comment_id: NNN node_id: NODE_ID -->` annotation in its heading.
+After all triage and fixes are complete, write `.rl/review-manifest.json` — a JSON array with one entry per comment. Each comment in `pr-reviews.md` has a `<!-- comment_id: NNN node_id: NODE_ID -->` annotation in its heading.
 
 ```json
 [

@@ -205,7 +205,7 @@ rl update    # git pull --ff-only under the hood
 | `.tickets/` | Task queue (tk) | Yes |
 | `IMPLEMENTATION_PLAN.md` | Vision from interview (always created) | Yes |
 | `openspec/` | Living specs and delta changes (if USE_OPENSPEC=true) | Yes |
-| `.rl/copilot-reviews.md` | Working file | No (.gitignore) |
+| `.rl/pr-reviews.md` | Working file | No (.gitignore) |
 | `.rl/review-manifest.json` | Working file | No (.gitignore) |
 | `.rl/e2e-results.md` | Working file | No (.gitignore) |
 

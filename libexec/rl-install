@@ -485,10 +485,10 @@ fi
 
 # .gitignore additions
 if [[ -f "$TARGET_DIR/.gitignore" ]]; then
-  if ! grep -q ".rl/copilot-reviews.md" "$TARGET_DIR/.gitignore" 2>/dev/null; then
+  if ! grep -q ".rl/pr-reviews.md" "$TARGET_DIR/.gitignore" 2>/dev/null; then
     print "" >> "$TARGET_DIR/.gitignore"
     print "# Ralph Loop working files" >> "$TARGET_DIR/.gitignore"
-    print ".rl/copilot-reviews.md" >> "$TARGET_DIR/.gitignore"
+    print ".rl/pr-reviews.md" >> "$TARGET_DIR/.gitignore"
     print ".rl/review-manifest.json" >> "$TARGET_DIR/.gitignore"
     print ".rl/e2e-results.md" >> "$TARGET_DIR/.gitignore"
     print ".rl/.e2e-*" >> "$TARGET_DIR/.gitignore"
@@ -496,7 +496,7 @@ if [[ -f "$TARGET_DIR/.gitignore" ]]; then
 else
   cat > "$TARGET_DIR/.gitignore" << 'EOF'
 # Ralph Loop working files
-.rl/copilot-reviews.md
+.rl/pr-reviews.md
 .rl/review-manifest.json
 .rl/e2e-results.md
 .rl/.e2e-*
