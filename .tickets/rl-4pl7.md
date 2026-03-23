@@ -17,3 +17,9 @@ Update ARCHITECTURE.md review system description to mention provider model. Upda
 
 ARCHITECTURE.md and README.md reflect multi-provider review system. LESSONS.md has entry about reviews as lesson material.
 
+
+## Notes
+
+**2026-03-23T19:59:20Z**
+
+Fixed per review: ARCHITECTURE.md alignment on pr-reviews.md line

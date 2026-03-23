@@ -30,7 +30,7 @@ All project-specific settings live in [`.rl/config`](../../.rl/config). Read it 
 | bootstrap | `rl loop bootstrap` | Decompose proposal into [`tk`](https://github.com/wedow/ticket) epic + task tickets |
 | build | `rl loop` | Pick next ready ticket, implement, test, close |
 | archive | `rl loop archive` | Merge delta specs into main specs (OpenSpec only) |
-| review | `rl loop review` | Address PR review comments (human + Copilot) |
+| review | `rl loop review` | Address PR review comments (human + configured review providers) |
 | e2e | `rl loop e2e` | Fix E2E test failures |
 
 ## Build Iteration Lifecycle
@@ -49,15 +49,15 @@ git push
 
 ## State Management
 
-State persists across iterations via git-tracked files:
+State persists across iterations via a mix of git-tracked files and auto-generated local artifacts:
 
 | Artifact | Purpose |
 |----------|---------|
 | [`.tickets/`](../../.tickets/) | Task queue managed by [`tk`](https://github.com/wedow/ticket) |
-| [`.claude/skills/SKILLS_INDEX.md`](../../.claude/skills/SKILLS_INDEX.md) | Scannable index of all available skills |
+| [`.claude/skills/SKILLS_INDEX.md`](../../.claude/skills/SKILLS_INDEX.md) | Scannable index of all available skills (auto-generated; not committed) |
 | [`LESSONS.md`](../../LESSONS.md) | Cumulative learnings from prior iterations |
 | [`AGENTS.md`](../../AGENTS.md) | Project-specific operational guide and commands |
-| [`.claude/skills/`](../../.claude/skills/) | Reusable agent knowledge (synced from rl source) |
+| [`.claude/skills/`](../../.claude/skills/) | Reusable agent knowledge (auto-generated/synced from rl source; not committed) |
 | [`IMPLEMENTATION_PLAN.md`](../../IMPLEMENTATION_PLAN.md) | High-level vision from interview mode |
 | [`openspec/`](../../openspec/) | Specs and active change proposals (if `USE_OPENSPEC=true`) |
 | [`.rl/config`](../../.rl/config) | Configuration (never modified by the loop) |

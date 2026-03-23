@@ -41,7 +41,7 @@ resources/commands/       → Slash commands for Claude Code (OpenSpec only)
 .rl/                      → rl configuration directory
   config                  → Project-specific settings (replaces .ralphrc)
   skills/                 → Project-specific skill overrides (highest precedence)
-  pr-reviews.md            → Working file (gitignored)
+  pr-reviews.md           → Working file (gitignored)
   review-manifest.json    → Working file (gitignored)
   e2e-results.md          → Working file (gitignored)
 .claude/skills/           → Effective skills (synced from rl + overrides on each rl loop run)

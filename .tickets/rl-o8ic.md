@@ -17,3 +17,13 @@ Update PROMPT_review.md: rename copilot-reviews.md to pr-reviews.md, replace 'be
 
 PROMPT_review.md references pr-reviews.md, has provider-calibrated triage, documents comment_type manifest field. github-pr-review skill updated.
 
+
+## Notes
+
+**2026-03-23T19:59:20Z**
+
+Fixed per review: updated .rl/skills/github-pr-review/SKILL.md to use correct fetch command (was stale ./ralph/fetch-reviews.sh)
+
+**2026-03-23T19:59:20Z**
+
+Fixed per review: updated .rl/skills/ralph-workflow/SKILL.md provider wording and git-tracked description

@@ -9,9 +9,7 @@ The Ralph Loop pulls all PR review comments (Copilot + human), triages them, and
 
 ## Fetching Reviews
 
-```bash
-./ralph/fetch-reviews.sh
-```
+Reviews are fetched automatically by `rl loop review`. The fetcher writes to `.rl/pr-reviews.md` with comments grouped by source:
 
 This writes to [`.rl/pr-reviews.md`](../../.rl/pr-reviews.md) with comments grouped by source:
 - **Human Review Comments** (higher priority)
