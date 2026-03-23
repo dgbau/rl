@@ -70,6 +70,8 @@ BACKPRESSURE="${BACKPRESSURE_CMD:-npx nx affected -t lint test build}"
 USE_OPENSPEC="${USE_OPENSPEC:-true}"
 BACKPRESSURE_TIMEOUT="${RALPH_BACKPRESSURE_TIMEOUT:-${BACKPRESSURE_TIMEOUT:-600}}"
 E2E_TIMEOUT="${RALPH_E2E_TIMEOUT:-${E2E_TIMEOUT:-300}}"
+USE_COPILOT_REVIEWS="${USE_COPILOT_REVIEWS:-true}"
+USE_GREPTILE_REVIEWS="${USE_GREPTILE_REVIEWS:-false}"
 
 # Defaults
 MODE="build"
@@ -742,7 +744,7 @@ run_review_mode() {
 
     echo "Fetching PR reviews..."
     local fetch_exit=0
-    RL_WORK="$RL_WORK" "$SCRIPT_DIR/rl-fetch-reviews" || fetch_exit=$?
+    RL_WORK="$RL_WORK" USE_COPILOT_REVIEWS="$USE_COPILOT_REVIEWS" USE_GREPTILE_REVIEWS="$USE_GREPTILE_REVIEWS" "$SCRIPT_DIR/rl-fetch-reviews" || fetch_exit=$?
     if [[ $fetch_exit -eq 1 ]]; then
       echo "No unresolved PR reviews found."
       # Warn if uncommitted changes exist
@@ -800,7 +802,7 @@ run_review_mode() {
     # Post replies and resolve threads (only if manifest exists and push succeeded)
     if [[ -f "$SCRIPT_DIR/rl-reply-reviews" && -f "$RL_WORK/review-manifest.json" ]]; then
       echo "Posting replies and resolving review threads..."
-      RL_WORK="$RL_WORK" "$SCRIPT_DIR/rl-reply-reviews" || echo "WARNING: Some replies/resolves failed (non-fatal)."
+      RL_WORK="$RL_WORK" USE_COPILOT_REVIEWS="$USE_COPILOT_REVIEWS" USE_GREPTILE_REVIEWS="$USE_GREPTILE_REVIEWS" "$SCRIPT_DIR/rl-reply-reviews" || echo "WARNING: Some replies/resolves failed (non-fatal)."
     fi
 
     # Re-request Copilot review so it triggers on the new push

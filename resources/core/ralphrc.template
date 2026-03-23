@@ -10,6 +10,10 @@ MAX_ITERATIONS=25
 REVIEW_WAIT=90
 USE_OPENSPEC=$USE_OPENSPEC
 
+# Review providers (both can be true simultaneously)
+USE_COPILOT_REVIEWS=true
+USE_GREPTILE_REVIEWS=false
+
 # Timeout settings (seconds)
 BACKPRESSURE_TIMEOUT=600
 E2E_TIMEOUT=300

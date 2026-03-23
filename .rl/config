@@ -12,6 +12,10 @@ REVIEW_WAIT=90
 USE_OPENSPEC=true
 IS_RL_TOOLKIT=true
 
+# Review providers (both can be true simultaneously)
+USE_COPILOT_REVIEWS=true
+USE_GREPTILE_REVIEWS=true
+
 # Timeout settings (seconds)
 BACKPRESSURE_TIMEOUT=600
 E2E_TIMEOUT=300
