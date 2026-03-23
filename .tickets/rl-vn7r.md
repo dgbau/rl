@@ -1,6 +1,6 @@
 ---
 id: rl-vn7r
-status: open
+status: closed
 deps: [rl-spib, rl-jm4t]
 links: []
 created: 2026-03-23T17:02:54Z
@@ -17,3 +17,9 @@ When USE_GREPTILE_REVIEWS=true, also hit GET /repos/{o}/{r}/issues/{pr}/comments
 
 With USE_GREPTILE_REVIEWS=true, Greptile issue comments appear in pr-reviews.md with correct sections and issue_comment_id annotations. With USE_COPILOT_REVIEWS=false, Copilot comments are excluded. last-review-ids.txt is written.
 
+
+## Notes
+
+**2026-03-23T23:51:16Z**
+
+Implemented Greptile issue comment fetching in rl-fetch-reviews. Added: provider config defaults, greptile author_type detection, issue comments endpoint fetch, provider filtering (copilot/greptile toggles), separate output sections (Greptile Summary, Greptile inline, Copilot/Bot), and last-review-ids.txt for exit detection.

@@ -1,8 +1,12 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
-# Fetch ALL PR review comments (Copilot + human reviewers) for the current branch
+# Fetch ALL PR review comments (Copilot + Greptile + human reviewers) for the current branch
 # Outputs: .rl/pr-reviews.md (via RL_WORK)
+#
+# Config (env vars, passed by rl-loop):
+#   USE_COPILOT_REVIEWS  -- fetch Copilot reviews (default true)
+#   USE_GREPTILE_REVIEWS -- fetch Greptile issue comments (default false)
 #
 # Exit codes:
 #   0 -- reviews found (unresolved comments written to output file)
@@ -15,10 +19,15 @@ WORK_DIR="${RL_WORK:-$SCRIPT_DIR}"
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "${SCRIPT_DIR:h}")"
 OUTPUT_FILE="$WORK_DIR/pr-reviews.md"
 
+# Provider toggles (backward-compatible defaults)
+USE_COPILOT_REVIEWS="${USE_COPILOT_REVIEWS:-true}"
+USE_GREPTILE_REVIEWS="${USE_GREPTILE_REVIEWS:-false}"
+
 cd "$REPO_ROOT"
 
 BRANCH=$(git branch --show-current)
 echo "Fetching PR reviews for branch: $BRANCH"
+echo "Providers: copilot=$USE_COPILOT_REVIEWS greptile=$USE_GREPTILE_REVIEWS"
 
 PR_NUMBER=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' 2>/dev/null || echo "")
 
@@ -45,6 +54,10 @@ TMPDIR_REVIEWS=$(mktemp -d)
 trap 'rm -rf "$TMPDIR_REVIEWS"' EXIT
 COMMENTS_FILE="$TMPDIR_REVIEWS/comments.json"
 REVIEWS_FILE="$TMPDIR_REVIEWS/reviews.json"
+ISSUE_COMMENTS_FILE="$TMPDIR_REVIEWS/issue_comments.json"
+
+# Initialize issue comments as empty
+echo "[]" > "$ISSUE_COMMENTS_FILE"
 
 # Fetch resolved thread comment IDs via GraphQL so we can exclude them from REST results
 echo "Fetching resolved thread status via GraphQL..."
@@ -75,6 +88,14 @@ if [[ -n "$RESOLVED_COMMENT_IDS" ]]; then
   echo "Found $RESOLVED_COUNT resolved threads (will be excluded)."
 fi
 
+# Author type detection jq expression (shared across fetches)
+# Greptile: login is "greptile[bot]" or contains "greptile"
+# Copilot: login is "copilot-pull-request-reviewer"
+AUTHOR_TYPE_EXPR='(if .user.login == "copilot-pull-request-reviewer" then "copilot"
+                  elif (.user.login | test("greptile"; "i")) then "greptile"
+                  elif .user.type == "Bot" then "bot"
+                  else "human" end)'
+
 # Fetch ALL line-level review comments (not just Copilot)
 # Filter: root comments only (not replies), exclude resolved threads
 # Output as a proper JSON array to avoid JSONL parsing issues
@@ -92,9 +113,7 @@ gh api "repos/$REPO_FULL/pulls/$PR_NUMBER/comments" \
     node_id: .node_id,
     created_at: .created_at,
     author: .user.login,
-    author_type: (if .user.login == "copilot-pull-request-reviewer" then "copilot"
-                  elif .user.type == "Bot" then "bot"
-                  else "human" end)
+    author_type: '"$AUTHOR_TYPE_EXPR"'
   }]' > "$COMMENTS_FILE" 2>/dev/null || echo "[]" > "$COMMENTS_FILE"
 
 # When --paginate returns multiple pages, each page produces a separate JSON array.
@@ -112,9 +131,7 @@ gh api "repos/$REPO_FULL/pulls/$PR_NUMBER/reviews" \
     id: .id,
     created_at: .created_at,
     author: .user.login,
-    author_type: (if .user.login == "copilot-pull-request-reviewer" then "copilot"
-                  elif .user.type == "Bot" then "bot"
-                  else "human" end)
+    author_type: '"$AUTHOR_TYPE_EXPR"'
   }]' > "$REVIEWS_FILE" 2>/dev/null || echo "[]" > "$REVIEWS_FILE"
 
 # Merge paginated review arrays too
@@ -122,16 +139,59 @@ if jq -e 'type == "array" and length > 0 and (.[0] | type == "array")' "$REVIEWS
   jq '[.[][]]' "$REVIEWS_FILE" > "$REVIEWS_FILE.tmp" && mv "$REVIEWS_FILE.tmp" "$REVIEWS_FILE"
 fi
 
+# Fetch Greptile issue comments (timeline comments) when enabled
+if [[ "$USE_GREPTILE_REVIEWS" == "true" ]]; then
+  echo "Fetching Greptile issue comments..."
+  gh api "repos/$REPO_FULL/issues/$PR_NUMBER/comments" \
+    --paginate 2>/dev/null \
+    | jq '[.[] | select(.user.login | test("greptile"; "i")) | {
+      body: .body,
+      id: .id,
+      created_at: .created_at,
+      author: .user.login,
+      author_type: "greptile"
+    }]' > "$ISSUE_COMMENTS_FILE" 2>/dev/null || echo "[]" > "$ISSUE_COMMENTS_FILE"
+
+  # Merge paginated arrays
+  if jq -e 'type == "array" and length > 0 and (.[0] | type == "array")' "$ISSUE_COMMENTS_FILE" >/dev/null 2>&1; then
+    jq '[.[][]]' "$ISSUE_COMMENTS_FILE" > "$ISSUE_COMMENTS_FILE.tmp" && mv "$ISSUE_COMMENTS_FILE.tmp" "$ISSUE_COMMENTS_FILE"
+  fi
+
+  GREPTILE_ISSUE_COUNT=$(jq 'length' "$ISSUE_COMMENTS_FILE" 2>/dev/null || echo "0")
+  echo "Found $GREPTILE_ISSUE_COUNT Greptile issue comments."
+fi
+
+# Apply provider filters: remove copilot when disabled, remove greptile when disabled
+if [[ "$USE_COPILOT_REVIEWS" != "true" ]]; then
+  echo "Filtering out Copilot comments (USE_COPILOT_REVIEWS=false)."
+  jq '[.[] | select(.author_type != "copilot")]' "$COMMENTS_FILE" > "$COMMENTS_FILE.tmp" && mv "$COMMENTS_FILE.tmp" "$COMMENTS_FILE"
+  jq '[.[] | select(.author_type != "copilot")]' "$REVIEWS_FILE" > "$REVIEWS_FILE.tmp" && mv "$REVIEWS_FILE.tmp" "$REVIEWS_FILE"
+fi
+
+if [[ "$USE_GREPTILE_REVIEWS" != "true" ]]; then
+  # Remove greptile inline review comments when disabled
+  jq '[.[] | select(.author_type != "greptile")]' "$COMMENTS_FILE" > "$COMMENTS_FILE.tmp" && mv "$COMMENTS_FILE.tmp" "$COMMENTS_FILE"
+  jq '[.[] | select(.author_type != "greptile")]' "$REVIEWS_FILE" > "$REVIEWS_FILE.tmp" && mv "$REVIEWS_FILE.tmp" "$REVIEWS_FILE"
+fi
+
 TOTAL_COMMENTS=$(jq 'length' "$COMMENTS_FILE" 2>/dev/null || echo "0")
 TOTAL_REVIEWS=$(jq 'length' "$REVIEWS_FILE" 2>/dev/null || echo "0")
+TOTAL_ISSUE_COMMENTS=$(jq 'length' "$ISSUE_COMMENTS_FILE" 2>/dev/null || echo "0")
 
-if [[ "$TOTAL_COMMENTS" -eq 0 && "$TOTAL_REVIEWS" -eq 0 ]]; then
+if [[ "$TOTAL_COMMENTS" -eq 0 && "$TOTAL_REVIEWS" -eq 0 && "$TOTAL_ISSUE_COMMENTS" -eq 0 ]]; then
   echo "No PR review comments found."
   rm -f "$OUTPUT_FILE"
   exit 1
 fi
 
-# Format output, grouping by source (human vs copilot/bot)
+# Collect ALL comment IDs for exit detection (written to last-review-ids.txt)
+{
+  jq -r '.[].id' "$COMMENTS_FILE" 2>/dev/null || true
+  jq -r '.[].id' "$REVIEWS_FILE" 2>/dev/null || true
+  jq -r '.[].id' "$ISSUE_COMMENTS_FILE" 2>/dev/null || true
+} | sort -n > "$WORK_DIR/last-review-ids.txt"
+
+# Format output, grouping by source
 {
   echo "# PR Review Comments (PR #$PR_NUMBER)"
   echo ""
@@ -139,6 +199,13 @@ fi
   echo "Repository: \`$REPO_FULL\`"
   echo "Fetched: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
   echo ""
+
+  # Greptile summary (issue comments) — top-level context section
+  if [[ "$TOTAL_ISSUE_COMMENTS" -gt 0 ]]; then
+    echo "## Greptile Summary"
+    echo ""
+    jq -r '.[] | "<!-- issue_comment_id: \(.id) -->\n\n\(.body)\n"' "$ISSUE_COMMENTS_FILE" 2>/dev/null || true
+  fi
 
   # Top-level review summaries
   if [[ "$TOTAL_REVIEWS" -gt 0 ]]; then
@@ -155,15 +222,24 @@ fi
     jq -r '[.[] | select(.author_type == "human")] | .[] | "### \(.author): `\(.path)` (line \(.line))\n<!-- comment_id: \(.id) node_id: \(.node_id) -->\n\n> \(.body | gsub("\n"; "\n> "))\n\n<details><summary>Diff hunk</summary>\n\n```diff\n\(.diff_hunk)\n```\n\n</details>\n"' "$COMMENTS_FILE" 2>/dev/null || true
   fi
 
+  # Greptile inline review comments (separate section)
+  GREPTILE_INLINE_COUNT=$(jq '[.[] | select(.author_type == "greptile")] | length' "$COMMENTS_FILE" 2>/dev/null || echo "0")
+  if [[ "$GREPTILE_INLINE_COUNT" -gt 0 ]]; then
+    echo "## Greptile Review Comments ($GREPTILE_INLINE_COUNT)"
+    echo ""
+    jq -r '[.[] | select(.author_type == "greptile")] | .[] | "### \(.author): `\(.path)` (line \(.line))\n<!-- comment_id: \(.id) node_id: \(.node_id) -->\n\n> \(.body | gsub("\n"; "\n> "))\n\n<details><summary>Diff hunk</summary>\n\n```diff\n\(.diff_hunk)\n```\n\n</details>\n"' "$COMMENTS_FILE" 2>/dev/null || true
+  fi
+
   # Copilot/bot line comments
-  BOT_COUNT=$(jq '[.[] | select(.author_type != "human")] | length' "$COMMENTS_FILE" 2>/dev/null || echo "0")
+  BOT_COUNT=$(jq '[.[] | select(.author_type == "copilot" or .author_type == "bot")] | length' "$COMMENTS_FILE" 2>/dev/null || echo "0")
   if [[ "$BOT_COUNT" -gt 0 ]]; then
     echo "## Copilot/Bot Review Comments ($BOT_COUNT)"
     echo ""
-    jq -r '[.[] | select(.author_type != "human")] | .[] | "### \(.author): `\(.path)` (line \(.line))\n<!-- comment_id: \(.id) node_id: \(.node_id) -->\n\n> \(.body | gsub("\n"; "\n> "))\n\n<details><summary>Diff hunk</summary>\n\n```diff\n\(.diff_hunk)\n```\n\n</details>\n"' "$COMMENTS_FILE" 2>/dev/null || true
+    jq -r '[.[] | select(.author_type == "copilot" or .author_type == "bot")] | .[] | "### \(.author): `\(.path)` (line \(.line))\n<!-- comment_id: \(.id) node_id: \(.node_id) -->\n\n> \(.body | gsub("\n"; "\n> "))\n\n<details><summary>Diff hunk</summary>\n\n```diff\n\(.diff_hunk)\n```\n\n</details>\n"' "$COMMENTS_FILE" 2>/dev/null || true
   fi
 } > "$OUTPUT_FILE"
 
-echo "Found $TOTAL_COMMENTS line comments ($HUMAN_COUNT human, $BOT_COUNT bot) and $TOTAL_REVIEWS review summaries."
+echo "Found $TOTAL_COMMENTS inline comments, $TOTAL_REVIEWS review summaries, $TOTAL_ISSUE_COMMENTS issue comments."
 echo "Written to: $OUTPUT_FILE"
+echo "Comment IDs written to: $WORK_DIR/last-review-ids.txt"
 exit 0
