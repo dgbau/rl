@@ -5,7 +5,7 @@
 #   rl skills add <name>        # Add a template to current repo
 #   rl skills installed         # Show skills in current repo
 #   rl skills new <name>        # Create new skill in current repo
-#   rl skills new --global <n>  # Create new reusable template (AI-filled)
+#   rl skills new --global <n>  # Create new reusable template
 #   rl skills new --no-ai <n>  # Create without AI generation
 #   rl skills add-openspec      # Install OpenSpec skills + commands + npm package
 

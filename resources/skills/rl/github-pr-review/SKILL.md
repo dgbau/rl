@@ -163,7 +163,7 @@ gh api graphql -f query="
 
 - Keep replies concise (1-2 sentences)
 - Always reference the commit SHA for code fixes
-- Always resolve the thread after replying
+- For review comments (`comment_type: "review"`), always resolve the thread after replying (issue comments cannot be resolved)
 
 ## PR Safety
 

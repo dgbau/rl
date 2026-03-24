@@ -163,7 +163,7 @@ Each manifest entry includes a `comment_type` field:
 [Ralph] Disagree. <specific reasoning explaining why the suggestion is incorrect or does not apply, with references to actual code lines/behavior>.
 ```
 
-**IMPORTANT**: Every reply MUST start with `[Ralph]`. Every entry MUST have `"resolve": true`. The manifest is consumed by `rl-reply-reviews` to post replies and resolve threads.
+**IMPORTANT**: Every reply MUST start with `[Ralph]`. Review comments (`comment_type: "review"`) MUST have `"resolve": true`. Issue comments (`comment_type: "issue"`) MUST have `"resolve": false` since timeline comments cannot be resolved. The manifest is consumed by `rl-reply-reviews` to post replies and resolve threads.
 
 ### Phase 6: Track
 
