@@ -838,7 +838,7 @@ run_review_mode() {
       if [[ "$USE_GREPTILE_REVIEWS" == "true" && -n "$repo_full" ]]; then
         echo "Re-triggering Greptile review on PR #$pr_num..."
         gh api "repos/$repo_full/issues/$pr_num/comments" \
-          -X POST -f body="@greptileai" 2>/dev/null \
+          -X POST -f body="@greptileai re-review" 2>/dev/null \
           || echo "WARNING: Could not re-trigger Greptile review (non-fatal)."
       fi
 
