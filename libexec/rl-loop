@@ -786,7 +786,16 @@ run_review_mode() {
     run_claude "$PROMPT_FILE"
 
     # Safety net: commit any changes Claude made but didn't commit
-    commit_if_dirty "fix(review): address PR #$(get_pr_number) feedback"
+    # Generate a descriptive message from the review manifest if available
+    local review_commit_msg="fix(review): address PR #$(get_pr_number) feedback"
+    if [[ -f "$RL_WORK/review-manifest.json" ]]; then
+      local manifest_summary
+      manifest_summary=$(jq -r '[.[] | select(.category == "code-fix") | .reply | sub("^\\[Ralph\\] "; "") | sub("\\. Verified.*$"; "") | .[0:80]] | join("; ")' "$RL_WORK/review-manifest.json" 2>/dev/null || echo "")
+      if [[ -n "$manifest_summary" ]]; then
+        review_commit_msg="fix(review): ${manifest_summary:0:72}"
+      fi
+    fi
+    commit_if_dirty "$review_commit_msg"
 
     if ! run_backpressure; then
       echo "WARNING: Backpressure failed. Attempting self-heal..."
