@@ -22,3 +22,7 @@ Multiple Greptile issue comments are rendered with distinct headings in pr-revie
 **2026-03-24T04:23:07Z**
 
 Review feedback: Added RALPH_ prefix fallback for USE_COPILOT_REVIEWS and USE_GREPTILE_REVIEWS in rl-loop for consistency with other config vars (per Copilot PR comment 2978895760)
+
+**2026-03-24T15:31:39Z**
+
+Review PR #1: Fixed tracked .claude/skills/rl-development/SKILL.md — removed from git index since it's runtime-synced from resources/skills/
