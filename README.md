@@ -278,8 +278,8 @@ The bootstrapper writes relevant skill names into each ticket's `## Skills` sect
 | `CLAUDE_MODEL` | `RALPH_MODEL` | `opus` | Claude model |
 | `MAX_ITERATIONS` | `RALPH_MAX_ITERATIONS` | `25` | Max auto iterations |
 | `REVIEW_WAIT` | `RALPH_REVIEW_WAIT` | `90` | Seconds between review cycles |
-| `USE_COPILOT_REVIEWS` | — | `true` | Enable Copilot PR reviews |
-| `USE_GREPTILE_REVIEWS` | — | `false` | Enable Greptile PR reviews (opt-in) |
+| `USE_COPILOT_REVIEWS` | `RALPH_USE_COPILOT_REVIEWS` | `true` | Enable Copilot PR reviews |
+| `USE_GREPTILE_REVIEWS` | `RALPH_USE_GREPTILE_REVIEWS` | `false` | Enable Greptile PR reviews (opt-in) |
 | `USE_OPENSPEC` | — | `true` | Enable spec-driven development |
 | `BACKPRESSURE_TIMEOUT` | `RALPH_BACKPRESSURE_TIMEOUT` | `600` | Backpressure timeout (seconds) |
 | `E2E_TIMEOUT` | `RALPH_E2E_TIMEOUT` | `300` | E2E timeout (seconds) |

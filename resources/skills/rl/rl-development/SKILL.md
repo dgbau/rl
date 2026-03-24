@@ -73,7 +73,7 @@ When dogfooding, the loop modifies the same files it runs from. `--auto` mode is
 
 ## Shell Scripting Conventions
 
-- All scripts are **zsh** (not bash) — use zsh features (`${(qq)var}`, `${0:A:h}`, etc.)
+- All rl scripts (`bin/`, `libexec/`, `lib/`) are **zsh** (not bash) — use zsh features (`${(qq)var}`, `${0:A:h}`, etc.). Note: `resources/core/` may contain bash scripts for target repos (e.g., `electron-smoke.sh`).
 - Source `lib/common.sh` at the top of every script
 - Use color variables from common.sh: `R`, `B`, `D`, `C`, `G`, `Y`, `ERR`
 - Use `print -P` for colored output, `print` for plain
