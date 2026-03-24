@@ -16,3 +16,9 @@ When Greptile posts multiple timeline comments (initial summary + follow-ups), r
 
 Multiple Greptile issue comments are rendered with distinct headings in pr-reviews.md
 
+
+## Notes
+
+**2026-03-24T04:23:07Z**
+
+Review feedback: Added RALPH_ prefix fallback for USE_COPILOT_REVIEWS and USE_GREPTILE_REVIEWS in rl-loop for consistency with other config vars (per Copilot PR comment 2978895760)
