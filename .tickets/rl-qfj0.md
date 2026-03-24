@@ -1,6 +1,6 @@
 ---
 id: rl-qfj0
-status: open
+status: closed
 deps: [rl-spib, rl-vn7r, rl-7ppd]
 links: []
 created: 2026-03-23T17:03:04Z
@@ -17,3 +17,9 @@ Replace hardcoded 'gh pr edit --add-reviewer @copilot' with provider-conditional
 
 Loop re-triggers correct provider(s). Loop exits when no new comment IDs appear. last-review-ids.txt cleaned up at mode start.
 
+
+## Notes
+
+**2026-03-24T00:00:24Z**
+
+Implemented provider-conditional re-triggering (Greptile via @greptileai issue comment, Copilot via --add-reviewer), no-new-reviews exit condition using last-review-ids.txt diff, and cleanup of last-review-ids.txt at review mode start.

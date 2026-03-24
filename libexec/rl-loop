@@ -734,6 +734,10 @@ run_archive_mode() {
 # ============================================
 run_review_mode() {
   local iteration=0
+
+  # Clean up stale review ID tracking from previous runs
+  rm -f "$RL_WORK/last-review-ids.txt"
+
   while true; do
     iteration=$((iteration + 1))
     echo ""
@@ -741,6 +745,14 @@ run_review_mode() {
 
     # Clean up stale manifest from previous iteration
     rm -f "$RL_WORK/review-manifest.json"
+
+    # Save previous review IDs for comparison (before fetch overwrites)
+    local prev_ids_file="$RL_WORK/prev-review-ids.txt"
+    if [[ -f "$RL_WORK/last-review-ids.txt" ]]; then
+      cp "$RL_WORK/last-review-ids.txt" "$prev_ids_file"
+    else
+      : > "$prev_ids_file"
+    fi
 
     echo "Fetching PR reviews..."
     local fetch_exit=0
@@ -759,6 +771,17 @@ run_review_mode() {
       echo "ERROR: Failed to fetch reviews (exit code $fetch_exit)."
       exit 1
     fi
+
+    # No-new-reviews exit: if comment IDs are identical to previous iteration,
+    # the reviewer is satisfied — no new feedback was posted after re-trigger.
+    if [[ $iteration -gt 1 && -f "$prev_ids_file" && -f "$RL_WORK/last-review-ids.txt" ]]; then
+      if diff -q "$prev_ids_file" "$RL_WORK/last-review-ids.txt" &>/dev/null; then
+        echo "No new review comments since last iteration — reviewer satisfied."
+        rm -f "$prev_ids_file"
+        break
+      fi
+    fi
+    rm -f "$prev_ids_file"
 
     run_claude "$PROMPT_FILE"
 
@@ -805,13 +828,25 @@ run_review_mode() {
       RL_WORK="$RL_WORK" USE_COPILOT_REVIEWS="$USE_COPILOT_REVIEWS" USE_GREPTILE_REVIEWS="$USE_GREPTILE_REVIEWS" "$SCRIPT_DIR/rl-reply-reviews" || echo "WARNING: Some replies/resolves failed (non-fatal)."
     fi
 
-    # Re-request Copilot review so it triggers on the new push
+    # Re-trigger review providers
     local pr_num
     pr_num=$(get_pr_number)
     if [[ -n "$pr_num" ]]; then
-      echo "Re-requesting Copilot review on PR #$pr_num..."
-      gh pr edit "$pr_num" --add-reviewer "@copilot" 2>/dev/null \
-        || echo "WARNING: Could not re-request Copilot review (non-fatal)."
+      local repo_full
+      repo_full=$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null || echo "")
+
+      if [[ "$USE_GREPTILE_REVIEWS" == "true" && -n "$repo_full" ]]; then
+        echo "Re-triggering Greptile review on PR #$pr_num..."
+        gh api "repos/$repo_full/issues/$pr_num/comments" \
+          -X POST -f body="@greptileai" 2>/dev/null \
+          || echo "WARNING: Could not re-trigger Greptile review (non-fatal)."
+      fi
+
+      if [[ "$USE_COPILOT_REVIEWS" == "true" ]]; then
+        echo "Re-requesting Copilot review on PR #$pr_num..."
+        gh pr edit "$pr_num" --add-reviewer "@copilot" 2>/dev/null \
+          || echo "WARNING: Could not re-request Copilot review (non-fatal)."
+      fi
     fi
 
     if [[ $iteration -ge $MAX_ITERATIONS ]]; then
