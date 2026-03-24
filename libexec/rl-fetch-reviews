@@ -116,11 +116,8 @@ gh api "repos/$REPO_FULL/pulls/$PR_NUMBER/comments" \
     author_type: '"$AUTHOR_TYPE_EXPR"'
   }]' > "$COMMENTS_FILE" 2>/dev/null || echo "[]" > "$COMMENTS_FILE"
 
-# When --paginate returns multiple pages, each page produces a separate JSON array.
-# Merge them into a single flat array.
-if jq -e 'type == "array" and length > 0 and (.[0] | type == "array")' "$COMMENTS_FILE" >/dev/null 2>&1; then
-  jq '[.[][]]' "$COMMENTS_FILE" > "$COMMENTS_FILE.tmp" && mv "$COMMENTS_FILE.tmp" "$COMMENTS_FILE"
-fi
+# Merge paginated comment arrays (--paginate produces concatenated arrays)
+jq -s 'flatten' "$COMMENTS_FILE" > "$COMMENTS_FILE.tmp" 2>/dev/null && mv "$COMMENTS_FILE.tmp" "$COMMENTS_FILE"
 
 # Fetch ALL top-level reviews (summary comments, not just Copilot)
 gh api "repos/$REPO_FULL/pulls/$PR_NUMBER/reviews" \
@@ -134,10 +131,8 @@ gh api "repos/$REPO_FULL/pulls/$PR_NUMBER/reviews" \
     author_type: '"$AUTHOR_TYPE_EXPR"'
   }]' > "$REVIEWS_FILE" 2>/dev/null || echo "[]" > "$REVIEWS_FILE"
 
-# Merge paginated review arrays too
-if jq -e 'type == "array" and length > 0 and (.[0] | type == "array")' "$REVIEWS_FILE" >/dev/null 2>&1; then
-  jq '[.[][]]' "$REVIEWS_FILE" > "$REVIEWS_FILE.tmp" && mv "$REVIEWS_FILE.tmp" "$REVIEWS_FILE"
-fi
+# Merge paginated review arrays (--paginate + --jq produces concatenated arrays)
+jq -s 'flatten' "$REVIEWS_FILE" > "$REVIEWS_FILE.tmp" 2>/dev/null && mv "$REVIEWS_FILE.tmp" "$REVIEWS_FILE"
 
 # Fetch Greptile issue comments (timeline comments) when enabled
 if [[ "$USE_GREPTILE_REVIEWS" == "true" ]]; then
@@ -153,9 +148,7 @@ if [[ "$USE_GREPTILE_REVIEWS" == "true" ]]; then
     }]' > "$ISSUE_COMMENTS_FILE" 2>/dev/null || echo "[]" > "$ISSUE_COMMENTS_FILE"
 
   # Merge paginated arrays
-  if jq -e 'type == "array" and length > 0 and (.[0] | type == "array")' "$ISSUE_COMMENTS_FILE" >/dev/null 2>&1; then
-    jq '[.[][]]' "$ISSUE_COMMENTS_FILE" > "$ISSUE_COMMENTS_FILE.tmp" && mv "$ISSUE_COMMENTS_FILE.tmp" "$ISSUE_COMMENTS_FILE"
-  fi
+  jq -s 'flatten' "$ISSUE_COMMENTS_FILE" > "$ISSUE_COMMENTS_FILE.tmp" 2>/dev/null && mv "$ISSUE_COMMENTS_FILE.tmp" "$ISSUE_COMMENTS_FILE"
 
   GREPTILE_ISSUE_COUNT=$(jq 'length' "$ISSUE_COMMENTS_FILE" 2>/dev/null || echo "0")
   echo "Found $GREPTILE_ISSUE_COUNT Greptile issue comments."
