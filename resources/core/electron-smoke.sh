@@ -7,10 +7,10 @@ set -euo pipefail
 BOOT_WAIT="${ELECTRON_SMOKE_TIMEOUT:-5}"
 
 # On Linux without a display, use xvfb-run if available
-ELECTRON_CMD="npx electron . --no-sandbox --disable-gpu"
+ELECTRON_CMD=(npx electron . --no-sandbox --disable-gpu)
 if [[ "$(uname)" == "Linux" && -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]; then
   if command -v xvfb-run &>/dev/null; then
-    ELECTRON_CMD="xvfb-run --auto-servernum $ELECTRON_CMD"
+    ELECTRON_CMD=(xvfb-run --auto-servernum "${ELECTRON_CMD[@]}")
   else
     echo "WARNING: No display and xvfb-run not found — skipping Electron smoke test"
     exit 0
@@ -18,7 +18,7 @@ if [[ "$(uname)" == "Linux" && -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]
 fi
 
 # Launch Electron in background
-eval "$ELECTRON_CMD" &>/dev/null &
+"${ELECTRON_CMD[@]}" &>/dev/null &
 PID=$!
 
 # ABI mismatches and CJS/ESM errors crash immediately — wait briefly

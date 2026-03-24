@@ -515,10 +515,10 @@ INSTRUCTIONS:
 
 Generate the SKILL.md now:"
 
-    local generated
-    generated=$(claude -p --bare --model sonnet --no-session-persistence --allowedTools "" "$prompt" 2>/dev/null)
+    local generated gen_status
+    generated=$(claude -p --bare --model sonnet --no-session-persistence --allowedTools "" "$prompt" 2>/dev/null) && gen_status=$? || gen_status=$?
 
-    if [[ $? -eq 0 && -n "$generated" && ${#generated} -gt 100 ]]; then
+    if [[ $gen_status -eq 0 && -n "$generated" && ${#generated} -gt 100 ]]; then
       # Write generated content to a temp file for review
       local tmpfile
       tmpfile=$(mktemp "${TMPDIR:-/tmp}/rl-skill-XXXXXX.md")
