@@ -497,7 +497,7 @@ fi
 
 # .gitignore additions
 if [[ -f "$TARGET_DIR/.gitignore" ]]; then
-  if ! grep -q ".rl/pr-reviews.md" "$TARGET_DIR/.gitignore" 2>/dev/null; then
+  if ! grep -Fq ".rl/pr-reviews.md" "$TARGET_DIR/.gitignore" 2>/dev/null; then
     print "" >> "$TARGET_DIR/.gitignore"
     print "# Ralph Loop working files" >> "$TARGET_DIR/.gitignore"
     print ".rl/pr-reviews.md" >> "$TARGET_DIR/.gitignore"

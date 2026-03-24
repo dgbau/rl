@@ -189,7 +189,7 @@ if [[ -f "$TARGET_DIR/.gitignore" ]]; then
     updated=true
   fi
   # Also handle repos already migrated to .rl/ but still referencing copilot-reviews.md
-  if grep -q ".rl/copilot-reviews.md" "$TARGET_DIR/.gitignore" 2>/dev/null; then
+  if grep -Fq ".rl/copilot-reviews.md" "$TARGET_DIR/.gitignore" 2>/dev/null; then
     sed -i '' 's|\.rl/copilot-reviews\.md|.rl/pr-reviews.md|g' "$TARGET_DIR/.gitignore"
     updated=true
   fi
