@@ -4,6 +4,10 @@ set -euo pipefail
 # Post replies to PR review comments and resolve threads using the review manifest.
 # Reads: .rl/review-manifest.json (produced by Claude during review triage)
 #
+# Supports two comment types via manifest's comment_type field:
+#   "review" (default) -- reply via pulls endpoint, optionally resolve thread
+#   "issue"            -- reply via issues endpoint (no thread resolution)
+#
 # Exit codes:
 #   0 -- all replies posted and threads resolved (or no manifest to process)
 #   1 -- partial failure (some replies/resolves failed, but continued)
@@ -80,49 +84,65 @@ for i in $(seq 0 $((ENTRY_COUNT - 1))); do
   COMMENT_ID=$(jq -r ".[$i].comment_id" "$MANIFEST_FILE")
   REPLY_BODY=$(jq -r ".[$i].reply" "$MANIFEST_FILE")
   SHOULD_RESOLVE=$(jq -r ".[$i].resolve" "$MANIFEST_FILE")
+  COMMENT_TYPE=$(jq -r ".[$i].comment_type // \"review\"" "$MANIFEST_FILE")
 
   echo ""
-  echo "--- Comment $COMMENT_ID ---"
+  echo "--- Comment $COMMENT_ID (type: $COMMENT_TYPE) ---"
 
-  # Post reply
-  echo "  Posting reply..."
-  REPLY_RESULT=$(gh api "repos/$REPO_FULL/pulls/$PR_NUMBER/comments" \
-    -X POST \
-    -f body="$REPLY_BODY" \
-    -F in_reply_to="$COMMENT_ID" \
-    --jq '.id' 2>&1) || {
-    echo "  WARNING: Failed to post reply for comment $COMMENT_ID: $REPLY_RESULT"
-    FAILURES=$((FAILURES + 1))
-    continue
-  }
-  echo "  Reply posted (id: $REPLY_RESULT)"
-  REPLIES_POSTED=$((REPLIES_POSTED + 1))
-
-  # Resolve thread if requested
-  if [[ "$SHOULD_RESOLVE" == "true" ]]; then
-    THREAD_ID=$(echo "$THREAD_MAP" | jq -r --argjson cid "$COMMENT_ID" '.[] | select(.comment_id == $cid) | .thread_id' 2>/dev/null || echo "")
-
-    if [[ -z "$THREAD_ID" ]]; then
-      echo "  WARNING: No thread mapping found for comment $COMMENT_ID. Cannot resolve."
-      FAILURES=$((FAILURES + 1))
-      continue
-    fi
-
-    echo "  Resolving thread $THREAD_ID..."
-    RESOLVE_RESULT=$(gh api graphql -f query='
-      mutation($threadId: ID!) {
-        resolveReviewThread(input: { threadId: $threadId }) {
-          thread { isResolved }
-        }
-      }
-    ' -f threadId="$THREAD_ID" \
-      --jq '.data.resolveReviewThread.thread.isResolved' 2>&1) || {
-      echo "  WARNING: Failed to resolve thread for comment $COMMENT_ID: $RESOLVE_RESULT"
+  if [[ "$COMMENT_TYPE" == "issue" ]]; then
+    # Issue comments: post a new issue comment (no thread resolution possible)
+    echo "  Posting issue comment reply..."
+    REPLY_RESULT=$(gh api "repos/$REPO_FULL/issues/$PR_NUMBER/comments" \
+      -X POST \
+      -f body="$REPLY_BODY" \
+      --jq '.id' 2>&1) || {
+      echo "  WARNING: Failed to post issue comment reply for comment $COMMENT_ID: $REPLY_RESULT"
       FAILURES=$((FAILURES + 1))
       continue
     }
-    echo "  Thread resolved: $RESOLVE_RESULT"
-    THREADS_RESOLVED=$((THREADS_RESOLVED + 1))
+    echo "  Issue comment reply posted (id: $REPLY_RESULT)"
+    REPLIES_POSTED=$((REPLIES_POSTED + 1))
+  else
+    # Review comments: reply via pulls endpoint + optionally resolve thread
+    echo "  Posting review reply..."
+    REPLY_RESULT=$(gh api "repos/$REPO_FULL/pulls/$PR_NUMBER/comments" \
+      -X POST \
+      -f body="$REPLY_BODY" \
+      -F in_reply_to="$COMMENT_ID" \
+      --jq '.id' 2>&1) || {
+      echo "  WARNING: Failed to post reply for comment $COMMENT_ID: $REPLY_RESULT"
+      FAILURES=$((FAILURES + 1))
+      continue
+    }
+    echo "  Reply posted (id: $REPLY_RESULT)"
+    REPLIES_POSTED=$((REPLIES_POSTED + 1))
+
+    # Resolve thread if requested
+    if [[ "$SHOULD_RESOLVE" == "true" ]]; then
+      THREAD_ID=$(echo "$THREAD_MAP" | jq -r --argjson cid "$COMMENT_ID" '.[] | select(.comment_id == $cid) | .thread_id' 2>/dev/null || echo "")
+
+      if [[ -z "$THREAD_ID" ]]; then
+        echo "  WARNING: No thread mapping found for comment $COMMENT_ID. Cannot resolve."
+        FAILURES=$((FAILURES + 1))
+        continue
+      fi
+
+      echo "  Resolving thread $THREAD_ID..."
+      RESOLVE_RESULT=$(gh api graphql -f query='
+        mutation($threadId: ID!) {
+          resolveReviewThread(input: { threadId: $threadId }) {
+            thread { isResolved }
+          }
+        }
+      ' -f threadId="$THREAD_ID" \
+        --jq '.data.resolveReviewThread.thread.isResolved' 2>&1) || {
+        echo "  WARNING: Failed to resolve thread for comment $COMMENT_ID: $RESOLVE_RESULT"
+        FAILURES=$((FAILURES + 1))
+        continue
+      }
+      echo "  Thread resolved: $RESOLVE_RESULT"
+      THREADS_RESOLVED=$((THREADS_RESOLVED + 1))
+    fi
   fi
 
   # Small delay to avoid rate limiting

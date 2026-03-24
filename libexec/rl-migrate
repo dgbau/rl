@@ -182,10 +182,15 @@ fi
 if [[ -f "$TARGET_DIR/.gitignore" ]]; then
   local updated=false
   if grep -q "ralph/copilot-reviews.md" "$TARGET_DIR/.gitignore" 2>/dev/null; then
-    sed -i '' 's|ralph/copilot-reviews\.md|.rl/copilot-reviews.md|g' "$TARGET_DIR/.gitignore"
+    sed -i '' 's|ralph/copilot-reviews\.md|.rl/pr-reviews.md|g' "$TARGET_DIR/.gitignore"
     sed -i '' 's|ralph/review-manifest\.json|.rl/review-manifest.json|g' "$TARGET_DIR/.gitignore"
     sed -i '' 's|ralph/e2e-results\.md|.rl/e2e-results.md|g' "$TARGET_DIR/.gitignore"
     sed -i '' 's|ralph/\.e2e-|.rl/.e2e-|g' "$TARGET_DIR/.gitignore"
+    updated=true
+  fi
+  # Also handle repos already migrated to .rl/ but still referencing copilot-reviews.md
+  if grep -Fq ".rl/copilot-reviews.md" "$TARGET_DIR/.gitignore" 2>/dev/null; then
+    sed -i '' 's|\.rl/copilot-reviews\.md|.rl/pr-reviews.md|g' "$TARGET_DIR/.gitignore"
     updated=true
   fi
   # Also handle repos with explicit e2e output paths

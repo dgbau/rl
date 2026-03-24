@@ -6,6 +6,7 @@
 #   rl skills installed         # Show skills in current repo
 #   rl skills new <name>        # Create new skill in current repo
 #   rl skills new --global <n>  # Create new reusable template
+#   rl skills new --no-ai <n>  # Create without AI generation
 #   rl skills add-openspec      # Install OpenSpec skills + commands + npm package
 
 set -euo pipefail
@@ -384,12 +385,14 @@ cmd_installed() {
 
 cmd_new() {
   local global=false
+  local no_ai=false
   local name=""
 
   # Parse args
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --global) global=true; shift ;;
+      --no-ai) no_ai=true; shift ;;
       *)        name="$1"; shift ;;
     esac
   done
@@ -409,9 +412,9 @@ cmd_new() {
   fi
 
   local dst_dir
+  local category=""
   if [[ "$global" == "true" ]]; then
     # Pick a category
-    local category=""
     print -P "Available categories:"
     local -a cats=()
     for cdir in "$RL_ROOT"/resources/skills/tools/*/; do
@@ -448,9 +451,108 @@ cmd_new() {
   content=$(<"$template_src")
   content="${content//_TEMPLATE/$name}"
 
+  # Attempt AI-powered auto-fill unless --no-ai is set
+  if [[ "$no_ai" == "false" ]] && (( $+commands[claude] )); then
+    print -P "${C}Generating skill content with Claude...${R}"
+
+    # Gather 2 example skills from the same category (or any tools skills) for style reference
+    local -a example_files=()
+    local search_dir="$RL_ROOT/resources/skills/tools"
+    if [[ -n "$category" && -d "$search_dir/$category" ]]; then
+      search_dir="$search_dir/$category"
+    fi
+    for efile in "$search_dir"/*/SKILL.md(N); do
+      [[ "${efile:h:t}" == "_TEMPLATE" ]] && continue
+      example_files+=("$efile")
+      (( ${#example_files} >= 2 )) && break
+    done
+    # Fall back to any tools skills if category had none
+    if (( ${#example_files} < 2 )); then
+      for efile in "$RL_ROOT"/resources/skills/tools/*/*/SKILL.md(N); do
+        [[ "${efile:h:t}" == "_TEMPLATE" ]] && continue
+        # Skip duplicates
+        local already=false
+        for existing in "${example_files[@]}"; do
+          [[ "$existing" == "$efile" ]] && { already=true; break; }
+        done
+        [[ "$already" == "true" ]] && continue
+        example_files+=("$efile")
+        (( ${#example_files} >= 2 )) && break
+      done
+    fi
+
+    # Build reference examples block
+    local examples_block=""
+    for efile in "${example_files[@]}"; do
+      local ename="${efile:h:t}"
+      examples_block+="
+--- EXAMPLE: ${ename} ---
+$(<"$efile")
+--- END EXAMPLE ---
+"
+    done
+
+    # Build the generation prompt
+    local prompt
+    prompt="You are generating a SKILL.md file for the technology \"${name}\".
+
+TEMPLATE STRUCTURE (follow this structure, replacing sections as needed):
+${content}
+
+EXAMPLE SKILLS (match this tone, depth, and style):
+${examples_block}
+
+INSTRUCTIONS:
+1. Replace [SKILL NAME] with the proper name for \"${name}\"
+2. Replace the generic template sections with technology-specific sections that are genuinely useful
+3. Keep the <!-- category: template --> comment (use 'template' as the category)
+4. Keep [FILL] markers for project-specific details that vary per project
+5. Fill in all technology-specific knowledge: best practices, common patterns, architecture guidance
+6. Include links to official documentation where relevant
+7. Keep the file between 40-110 lines
+8. Do NOT include meta-template instructions or author instructions
+9. Output ONLY the SKILL.md content — no explanation, no code fences
+
+Generate the SKILL.md now:"
+
+    local generated gen_status
+    generated=$(claude -p --bare --model sonnet --no-session-persistence --allowedTools "" "$prompt" 2>/dev/null) && gen_status=$? || gen_status=$?
+
+    if [[ $gen_status -eq 0 && -n "$generated" && ${#generated} -gt 100 ]]; then
+      # Write generated content to a temp file for review
+      local tmpfile
+      tmpfile=$(mktemp "${TMPDIR:-/tmp}/rl-skill-XXXXXX.md")
+      print "$generated" > "$tmpfile"
+
+      print -P "${G}${B}Generated!${R} Opening for review..."
+      print -P "${D}Review the generated content. Save and close to accept, or empty the file to use the blank template.${R}"
+
+      # Open in editor for review
+      ${EDITOR:-vi} "$tmpfile"
+
+      # Check if user kept content or emptied the file
+      if [[ -s "$tmpfile" ]]; then
+        content=$(<"$tmpfile")
+        print -P "${G}Using AI-generated content.${R}"
+      else
+        print -P "${Y}Discarded generated content. Using blank template.${R}"
+      fi
+      rm -f "$tmpfile"
+    else
+      print -P "${Y}${B}Note:${R} AI generation failed — using blank template."
+      print -P "${D}You can fill in the [FILL] sections manually.${R}"
+    fi
+  elif [[ "$no_ai" == "true" ]]; then
+    print -P "${D}Skipping AI generation (--no-ai).${R}"
+  else
+    print -P "${D}Claude CLI not found — using blank template.${R}"
+  fi
+
   print "$content" > "$dst_dir/SKILL.md"
   print -P "${G}${B}Created:${R} $dst_dir/SKILL.md"
-  print -P "${D}Edit the SKILL.md file and fill in the [FILL] sections.${R}"
+  if [[ "$no_ai" == "true" ]] || ! (( $+commands[claude] )); then
+    print -P "${D}Edit the SKILL.md file and fill in the [FILL] sections.${R}"
+  fi
 }
 
 cmd_add_openspec() {
@@ -534,6 +636,7 @@ case "$subcmd" in
     print "  installed         Show skills installed in current repo"
     print "  new <name>        Create new skill in current repo"
     print "  new --global <n>  Create new reusable template in rl toolkit"
+    print "  new --no-ai <n>   Create skill without AI auto-fill"
     print "  sync              Sync skills from rl source to .claude/skills/"
     print "  override <name>   Copy an rl skill to .rl/skills/ for customization"
     print "  add-openspec      Install OpenSpec skills + commands + npm package"

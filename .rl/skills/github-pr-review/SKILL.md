@@ -9,7 +9,7 @@ The Ralph Loop pulls all PR review comments (Copilot, Greptile, and human), tria
 
 ## Fetching Reviews
 
-Reviews are fetched automatically by `rl loop review`. The fetcher (`libexec/rl-fetch-reviews`) writes to `.rl/pr-reviews.md` with comments grouped by source:
+Reviews are fetched automatically by `rl loop review`, which writes to [`.rl/pr-reviews.md`](../../.rl/pr-reviews.md) with comments grouped by source:
 - **Greptile Summary** (issue comment with confidence score and analysis)
 - **Human Review Comments** (highest priority)
 - **Greptile Review Comments** (codebase-aware inline findings)
@@ -93,7 +93,7 @@ After fixing code and pushing, reply to each PR comment and resolve its thread.
 
 ### Comment ID Extraction
 
-The review fetcher embeds comment IDs and GraphQL node IDs as HTML comments in the markdown output:
+The review fetcher (`libexec/rl-fetch-reviews`) embeds comment IDs and GraphQL node IDs as HTML comments in the markdown output:
 
 **Review comments** (inline — Copilot, Greptile, human):
 ```

@@ -19,6 +19,7 @@ TARGET_DIR=""
 USE_OPENSPEC=""
 SELECTED_SKILLS=()
 NO_PROMPT=false
+HAS_ELECTRON=false
 
 # ---------------------------------------------------------------------------
 # Parse arguments
@@ -159,7 +160,7 @@ if [[ "$NO_PROMPT" != "true" ]]; then
       [[ "$deps_json" == *"d3"* || "$deps_json" == *"recharts"* || "$deps_json" == *"echarts"* ]] && suggested+=(data-visualization)
       [[ "$deps_json" == *"@payloadcms/"* ]]       && suggested+=(cms)
       [[ "$deps_json" == *"socket.io"* || "$deps_json" == *"ably"* ]] && suggested+=(realtime)
-      [[ "$deps_json" == *"electron"* ]]           && suggested+=(electron)
+      [[ "$deps_json" == *"electron"* ]]           && suggested+=(electron) && HAS_ELECTRON=true
       [[ "$deps_json" == *"@anthropic-ai/sdk"* ]]  && suggested+=(anthropic-sdk)
       # Stack detection
       if [[ "$deps_json" == *"next"* && "$deps_json" == *"@payloadcms/"* ]]; then
@@ -352,12 +353,23 @@ fi
 
 BACKPRESSURE_CMD="${BACKPRESSURE_CMD:-echo 'No backpressure command configured -- set BACKPRESSURE_CMD in .rl/config'}"
 
+# Append Electron smoke test if electron detected
+if [[ "$HAS_ELECTRON" == "true" ]]; then
+  BACKPRESSURE_CMD="$BACKPRESSURE_CMD && bash .rl/electron-smoke.sh"
+fi
+
 # ---------------------------------------------------------------------------
 # Generate .rl/config
 # ---------------------------------------------------------------------------
 print ""
 print -P "${D}Creating .rl/ directory and config...${R}"
 mkdir -p "$TARGET_DIR/.rl/skills"
+
+# Copy Electron smoke test if detected
+if [[ "$HAS_ELECTRON" == "true" ]]; then
+  cp "$RL_ROOT/resources/core/electron-smoke.sh" "$TARGET_DIR/.rl/electron-smoke.sh"
+  print -P "  ${D}Installed Electron smoke test → .rl/electron-smoke.sh${R}"
+fi
 generate_rl_config \
   "$PROJECT_NAME" \
   "$BASE_BRANCH" \
@@ -485,10 +497,10 @@ fi
 
 # .gitignore additions
 if [[ -f "$TARGET_DIR/.gitignore" ]]; then
-  if ! grep -q ".rl/copilot-reviews.md" "$TARGET_DIR/.gitignore" 2>/dev/null; then
+  if ! grep -Fq ".rl/pr-reviews.md" "$TARGET_DIR/.gitignore" 2>/dev/null; then
     print "" >> "$TARGET_DIR/.gitignore"
     print "# Ralph Loop working files" >> "$TARGET_DIR/.gitignore"
-    print ".rl/copilot-reviews.md" >> "$TARGET_DIR/.gitignore"
+    print ".rl/pr-reviews.md" >> "$TARGET_DIR/.gitignore"
     print ".rl/review-manifest.json" >> "$TARGET_DIR/.gitignore"
     print ".rl/e2e-results.md" >> "$TARGET_DIR/.gitignore"
     print ".rl/.e2e-*" >> "$TARGET_DIR/.gitignore"
@@ -496,7 +508,7 @@ if [[ -f "$TARGET_DIR/.gitignore" ]]; then
 else
   cat > "$TARGET_DIR/.gitignore" << 'EOF'
 # Ralph Loop working files
-.rl/copilot-reviews.md
+.rl/pr-reviews.md
 .rl/review-manifest.json
 .rl/e2e-results.md
 .rl/.e2e-*

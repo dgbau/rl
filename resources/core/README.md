@@ -116,7 +116,7 @@ USE_OPENSPEC=true
 | `rl loop` (in rl toolkit) | Loop orchestrator | N/A (sourced from rl) |
 | `PROMPT_*.md` (in rl toolkit) | Mode-specific prompts (7 files) | N/A (sourced from rl) |
 | `.rl/config` | Project configuration | Yes |
-| `.rl/copilot-reviews.md` | Fetched reviews (working file) | No |
+| `.rl/pr-reviews.md` | Fetched reviews (working file) | No |
 | `.rl/review-manifest.json` | Review reply manifest (working file) | No |
 | `.rl/e2e-results.md` | E2E failures (working file) | No |
 | `openspec/` | Specs and changes (if `USE_OPENSPEC=true`) | Yes |

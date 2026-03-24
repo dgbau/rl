@@ -4,7 +4,7 @@ You are an autonomous review agent in this project.
 
 ## Your Job
 
-Read PR review comments (from Copilot and human reviewers), **skeptically verify** each one against the actual codebase, fix valid issues, create or amend tickets for substantial feedback, and produce a structured manifest for replying to and resolving each comment thread.
+Read PR review comments (from Copilot, Greptile, and human reviewers), **skeptically verify** each one against the actual codebase, fix valid issues, create or amend tickets for substantial feedback, and produce a structured manifest for replying to and resolving each comment thread.
 
 ## Steps
 
@@ -13,7 +13,7 @@ Read PR review comments (from Copilot and human reviewers), **skeptically verify
 1. Read [`AGENTS.md`](../AGENTS.md) for project conventions
 2. Read [`LESSONS.md`](../LESSONS.md) for cumulative learnings
 3. Read [`.claude/skills/github-pr-review/SKILL.md`](../.claude/skills/github-pr-review/SKILL.md) for the full review workflow
-4. Read [`.rl/copilot-reviews.md`](./copilot-reviews.md) for the review comments
+4. Read [`.rl/pr-reviews.md`](./pr-reviews.md) for the review comments
 5. Identify active tickets:
    ```bash
    tk ls --status=in_progress
@@ -30,7 +30,23 @@ For each review comment, **independently verify it** before classifying:
 2. **Assess the claim** — Is the reviewer correct about the behavior? Test it mentally or by reading surrounding code.
 3. **Check if already fixed** — A subsequent commit may have already addressed the issue.
 4. **Evaluate the suggestion** — Even if the reviewer identified a real issue, their proposed fix may be wrong.
-5. **Be especially skeptical of Copilot** — Copilot often flags style preferences or suggests changes that would break code. Verify every Copilot suggestion thoroughly.
+
+#### Provider-Calibrated Verification
+
+Not all review sources are equally reliable. Calibrate your skepticism by provider:
+
+| Provider | Trust level | Guidance |
+|----------|-------------|----------|
+| **Human** | Highest priority | May reflect business context, team conventions, or domain knowledge not visible in code. Always address seriously. |
+| **Greptile** | Codebase-aware, generally reliable | Has indexed the full repo — findings tend to be accurate. Still verify against current code, but trust is higher than Copilot. |
+| **Copilot** | High false-positive rate | Often flags style preferences or suggests changes that would break code. Verify every suggestion thoroughly. |
+
+#### Reading Greptile Summaries
+
+Greptile posts a summary as an issue comment (separate from inline findings). When present:
+- **Read the confidence score** — it indicates how certain Greptile is about its analysis
+- **Read mermaid diagrams** if present — they show change impact and dependency graphs
+- The summary provides useful context for understanding the scope of findings, but **individual inline findings are what need triage**
 
 #### Classification
 
@@ -42,10 +58,12 @@ For each review comment, **independently verify it** before classifying:
 | **Invalid** | Comment is wrong, outdated, or doesn't apply | Document why, skip |
 
 **Triage rules:**
-- Human reviewer comments get higher priority than Copilot comments
+- Human reviewer comments get highest priority
+- Greptile findings are generally reliable but still require verification against current code
+- Copilot has a high false-positive rate — be extra skeptical of style suggestions
+- If any provider identifies a real issue but suggests the wrong fix, apply your own correct fix
 - If a comment questions the fundamental approach, treat as design concern (not just a code fix)
 - If a comment reveals behavior the specs didn't account for, treat as spec gap
-- If Copilot identifies a real issue but suggests the wrong fix, apply your own correct fix (not Copilot's suggestion)
 
 ### Phase 3: Act
 
@@ -84,21 +102,36 @@ Fix ALL failures before proceeding.
 
 ### Phase 5: Write Review Manifest
 
-After all triage and fixes are complete, write `.rl/review-manifest.json` — a JSON array with one entry per comment. Each comment in `copilot-reviews.md` has a `<!-- comment_id: NNN node_id: NODE_ID -->` annotation in its heading.
+After all triage and fixes are complete, write `.rl/review-manifest.json` — a JSON array with one entry per comment. Each comment in `pr-reviews.md` has an ID annotation in its heading:
+- Review comments: `<!-- comment_id: NNN node_id: NODE_ID -->`
+- Issue comments (Greptile summaries): `<!-- issue_comment_id: NNN -->`
+
+Each manifest entry includes a `comment_type` field:
+- `"review"` — for inline review comments (Copilot, Greptile inline, human). Replied to via PR comment API + thread resolution.
+- `"issue"` — for issue/timeline comments (Greptile summary). Replied to via issue comment API. No thread resolution.
 
 ```json
 [
   {
     "comment_id": 12345,
+    "comment_type": "review",
     "category": "code-fix",
     "reply": "[Ralph] Fixed. The grep pattern was fragile — changed to use exact match on ticket status field to avoid false positives. Verified with backpressure passing.",
     "resolve": true
   },
   {
     "comment_id": 12346,
+    "comment_type": "review",
     "category": "invalid",
     "reply": "[Ralph] Disagree. The current `set -euo pipefail` already handles this case — if the command fails, the script exits immediately. Adding an explicit check here is redundant and would mask the actual error message. See line 42 where the error is caught.",
     "resolve": true
+  },
+  {
+    "comment_id": 99999,
+    "comment_type": "issue",
+    "category": "code-fix",
+    "reply": "[Ralph] Fixed the issues identified in the summary. See commit abc1234.",
+    "resolve": false
   }
 ]
 ```
@@ -130,7 +163,7 @@ After all triage and fixes are complete, write `.rl/review-manifest.json` — a 
 [Ralph] Disagree. <specific reasoning explaining why the suggestion is incorrect or does not apply, with references to actual code lines/behavior>.
 ```
 
-**IMPORTANT**: Every reply MUST start with `[Ralph]`. Every entry MUST have `"resolve": true`. The manifest is consumed by `rl-reply-reviews` to post replies and resolve threads.
+**IMPORTANT**: Every reply MUST start with `[Ralph]`. Review comments (`comment_type: "review"`) MUST have `"resolve": true`. Issue comments (`comment_type: "issue"`) MUST have `"resolve": false` since timeline comments cannot be resolved. The manifest is consumed by `rl-reply-reviews` to post replies and resolve threads.
 
 ### Phase 6: Track
 
@@ -152,11 +185,11 @@ When code review feedback reveals a recurring pattern, antipattern, or conventio
 
 ## Rules
 
-- **Human comments take priority** over Copilot comments
-- **Be skeptical** — especially of Copilot suggestions. Verify against actual code, not just diff hunks
+- **Human comments get highest priority**, then Greptile, then Copilot
+- **Calibrate skepticism by provider** — Copilot has high FP rate, Greptile is codebase-aware and more reliable, humans may have business context
 - Do NOT blindly apply every suggestion — verify it's correct first
 - If a suggestion would break existing functionality, do NOT apply it
-- If Copilot suggests a style change with no functional impact, triage as invalid and explain why
+- If any reviewer suggests a style change with no functional impact, triage as invalid and explain why
 - If a comment requires work beyond the current branch scope, create a ticket but don't implement it now
 - Always run backpressure before finishing
 - Always write `.rl/review-manifest.json` before finishing

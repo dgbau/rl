@@ -4,13 +4,17 @@
 
 PROJECT_NAME="rl"
 BASE_BRANCH="main"
-BACKPRESSURE_CMD="zsh -n bin/rl libexec/rl-create libexec/rl-install libexec/rl-skills lib/common.sh libexec/rl-migrate libexec/rl-loop libexec/rl-fetch-reviews libexec/rl-reply-reviews libexec/rl-run-e2e"
+BACKPRESSURE_CMD="zsh -n bin/rl libexec/rl-create libexec/rl-install libexec/rl-skills lib/common.sh libexec/rl-migrate libexec/rl-loop libexec/rl-fetch-reviews libexec/rl-reply-reviews libexec/rl-run-e2e && bash -n resources/core/electron-smoke.sh"
 E2E_CMD=""
 CLAUDE_MODEL="opus"
 MAX_ITERATIONS=25
 REVIEW_WAIT=90
 USE_OPENSPEC=true
 IS_RL_TOOLKIT=true
+
+# Review providers (both can be true simultaneously)
+USE_COPILOT_REVIEWS=true
+USE_GREPTILE_REVIEWS=true
 
 # Timeout settings (seconds)
 BACKPRESSURE_TIMEOUT=600

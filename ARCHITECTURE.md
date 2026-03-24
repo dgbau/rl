@@ -20,8 +20,8 @@ libexec/                  → Internal subcommands (not invoked directly)
   rl-skills               → Manage skill templates
   rl-migrate              → Migrate from legacy ralph/
   rl-release              → Create releases
-  rl-fetch-reviews        → PR review fetcher (GraphQL resolved-thread filtering)
-  rl-reply-reviews        → PR review reply + thread resolution (bash)
+  rl-fetch-reviews        → PR review fetcher (multi-provider: Copilot, Greptile, human)
+  rl-reply-reviews        → PR review reply + thread resolution (review & issue comments)
   rl-run-e2e              → E2E test runner
 lib/common.sh             → Shared shell functions
 resources/core/           → Prompts and templates (NOT copied to repos)
@@ -41,7 +41,7 @@ resources/commands/       → Slash commands for Claude Code (OpenSpec only)
 .rl/                      → rl configuration directory
   config                  → Project-specific settings (replaces .ralphrc)
   skills/                 → Project-specific skill overrides (highest precedence)
-  copilot-reviews.md      → Working file (gitignored)
+  pr-reviews.md           → Working file (gitignored)
   review-manifest.json    → Working file (gitignored)
   e2e-results.md          → Working file (gitignored)
 .claude/skills/           → Effective skills (synced from rl + overrides on each rl loop run)
@@ -113,7 +113,7 @@ Precedence: project override > template > stack > language > universal > workflo
 
 Environment variable overrides: `RL_*` or `RALPH_*` vars take precedence over config file values.
 
-Key config variables: `PROJECT_NAME`, `BASE_BRANCH`, `BACKPRESSURE_CMD`, `E2E_CMD`, `USE_OPENSPEC`, `BACKPRESSURE_TIMEOUT`, `E2E_TIMEOUT`, `CLAUDE_MODEL`, `MAX_ITERATIONS`, `REVIEW_WAIT`
+Key config variables: `PROJECT_NAME`, `BASE_BRANCH`, `BACKPRESSURE_CMD`, `E2E_CMD`, `USE_OPENSPEC`, `BACKPRESSURE_TIMEOUT`, `E2E_TIMEOUT`, `CLAUDE_MODEL`, `MAX_ITERATIONS`, `REVIEW_WAIT`, `USE_COPILOT_REVIEWS`, `USE_GREPTILE_REVIEWS`
 
 ## Release Model
 
