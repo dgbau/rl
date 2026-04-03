@@ -63,7 +63,7 @@ This is an **agent-driven** operation - you will read delta specs and directly e
 
    d. **Create new main spec** if capability doesn't exist yet:
       - Create `openspec/specs/<capability>/spec.md`
-      - Add Purpose section (can be brief, mark as TBD)
+      - Add Purpose section — derive it from the change's proposal (`openspec/changes/<name>/proposal.md`) or design doc. If neither exists, summarize the capability's intent from its requirements. Never leave Purpose as TBD.
       - Add Requirements section with the ADDED requirements
 
 4. **Show summary**
